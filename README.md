@@ -1,6 +1,6 @@
 # Python implementation of Go-Stop game
 
-Refer [test.py] to see how to run the game.
+Refer [test.py](test.py) to see how to run the game.
 
 ```
  +-- go_stop/
