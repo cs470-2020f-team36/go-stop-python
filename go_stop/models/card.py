@@ -151,7 +151,7 @@ class BonusCard(Card):
 
     def render(self, mode: str):
         if mode == "text":
-            translation = {2: "쌍", 3: "쓰리"}
+            translation = {2: "투", 3: "쓰리"}
             return "보너스 {}피".format(translation[self.multiple])
         else:
             raise NotImplementedError
