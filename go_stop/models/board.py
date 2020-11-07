@@ -13,6 +13,8 @@ class Board(Setting):
     """
 
     def __init__(self):
+        super().__init__()
+
         # shuffle the drawing pile
         self.drawing_pile = copy(go_stop_cards)
         random.shuffle(self.drawing_pile)

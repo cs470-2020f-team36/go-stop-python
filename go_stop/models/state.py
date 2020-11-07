@@ -83,8 +83,6 @@ class State:
         Serialize the state.
         """
 
-        print("select match", self.select_match)
-
         return {
             "player": self.player,
             "bomb_increment": self.bomb_increment,
