@@ -761,14 +761,6 @@ class Game(Setting):
                 if BonusCard(3) in board.capture_fields[opponent]
                 else []
             )
-            print(
-                "-------------OPP",
-                opponent,
-                [
-                    CardList(self.board.capture_fields[0]).serialize(),
-                    CardList(self.board.capture_fields[1]).serialize(),
-                ],
-            )
 
             if len(singles) == 0 and len(doubles) == 0 and len(triples) == 0:
                 return
@@ -789,20 +781,9 @@ class Game(Setting):
                 junk = triples[-1]
                 i -= 3
 
-            print("-------------JUNK", junk, "PLAYER", state.player)
-
             self.board.capture_fields[opponent].remove(junk)
             self.board.capture_fields[state.player].append(junk)
             self.logger.log("take junk from opponent", junk)
-            print(
-                "-------------JUNK",
-                junk,
-                "PLAYER",
-                [
-                    CardList(self.board.capture_fields[0]).serialize(),
-                    CardList(self.board.capture_fields[1]).serialize(),
-                ],
-            )
 
     def _calculate_scores(self, without_multiples: bool = False):
         if "four of a month" in [
