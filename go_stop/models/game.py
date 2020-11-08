@@ -806,11 +806,8 @@ class Game(Setting):
             bright_point = 0
 
         # three brights with rain (December)
-        if BrightCard(12) in cf:
-            bright_point -= 1
-
-        if bright_point < 2:
-            bright_point = 0
+        if bright_point == 3 and BrightCard(12) in cf:
+            bright_point = 2
 
         # five brights
         if bright_point == 5:
