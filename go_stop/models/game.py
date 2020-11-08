@@ -786,9 +786,10 @@ class Game(Setting):
             self.logger.log("take junk from opponent", junk)
 
     def _calculate_scores(self, without_multiples: bool = False):
-        if "four of a month" in [
+        kinds = [
             f.kind for f in self.state.score_factors[self.state.player]
-        ]:
+        ]
+        if "four of a month" in kinds or "three stackings" in kinds:
             self.state.scores = [
                 Scorer.calculate(self.state, player) for player in [0, 1]
             ]
