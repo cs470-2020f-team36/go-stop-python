@@ -12,7 +12,7 @@ class Board(Setting):
     Abstracting all card fields
     """
 
-    def __init__(self):
+    def __init__(self, player: int = 0):
         super().__init__()
 
         # shuffle the drawing pile
@@ -34,7 +34,7 @@ class Board(Setting):
         # capture fields
         self.capture_fields = [CardList(), CardList()]
 
-        center_field = self._move_cards_at_beginning(center_field)
+        center_field = self._move_cards_at_beginning(player, center_field)
 
         # sort card lists
         center_field.sort()
@@ -47,7 +47,7 @@ class Board(Setting):
 
         self.sort()
 
-    def _move_cards_at_beginning(self, center_field: CardList) -> CardList:
+    def _move_cards_at_beginning(self, player: int, center_field: CardList) -> CardList:
         """
         A private method which moves bonus cards and four-of-a-months
         at the beginning to the first player.
@@ -73,7 +73,7 @@ class Board(Setting):
                 center_field.remove(BonusCard(n))
                 card = self.drawing_pile.pop(0)
                 center_field.append(card)
-                self.capture_fields[0].append(BonusCard(n))
+                self.capture_fields[player].append(BonusCard(n))
                 changed = True
 
         if self.proceed_when_center_field_has_a_four_of_a_month:
@@ -83,11 +83,11 @@ class Board(Setting):
                     cards = self.drawing_pile[0:4]
                     center_field.extend(cards)
                     self.drawing_pile = self.drawing_pile[4:]
-                    self.capture_fields[0].extend(go_stop_cards.of_month(month))
+                    self.capture_fields[player].extend(go_stop_cards.of_month(month))
                     changed = True
 
         if changed:
-            return self._move_cards_at_beginning(center_field)
+            return self._move_cards_at_beginning(player, center_field)
 
         return center_field
 

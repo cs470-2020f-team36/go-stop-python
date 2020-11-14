@@ -4,7 +4,7 @@ from .score_factor import ScoreFactor
 
 
 class State:
-    def __init__(self):
+    def __init__(self, player: int = 0):
         """
         State of the game.
 
@@ -65,7 +65,7 @@ class State:
         Who won the game, if it is ended.
         """
 
-        self.player = 0
+        self.player = player
         self.bomb_increment = 0
         self.go_histories = [[], []]
         self.select_match = None

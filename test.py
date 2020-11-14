@@ -26,7 +26,6 @@ print(game.serialize())
 
 show_separator()
 
-# The first player is always `Player 0`.
 # You may see the list of actions that
 # the current player (game.state.player)
 # is able to do via `game.actions()`.

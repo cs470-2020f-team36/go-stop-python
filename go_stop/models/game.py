@@ -37,11 +37,11 @@ from .score_factor import ScoreFactor
 
 
 class Game(Setting):
-    def __init__(self):
+    def __init__(self, player: int = 0):
         super().__init__()
 
-        self.board = Board()
-        self.state = State()
+        self.board = Board(player)
+        self.state = State(player)
         self.flags = Flags()
         self.logger = Logger()
 
@@ -49,7 +49,7 @@ class Game(Setting):
 
         if self.proceed_when_center_field_has_a_four_of_a_month:
             # if all players have a four-of-a-month
-            # or the center fieldhas a four-of-a-month,
+            # or the center field has a four-of-a-month,
             # reset the board
             while len(
                 [
