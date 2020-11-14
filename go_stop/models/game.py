@@ -387,7 +387,7 @@ class Game(Setting):
             state.player = 1 - state.player
 
             # push back?
-            if state.player == 0 and board.hands[0] == []:
+            if state.player == state.starting_player and board.hands[state.starting_player] == []:
                 state.ended = True
                 state.winner = None
 
@@ -472,7 +472,7 @@ class Game(Setting):
             state.player = 1 - state.player
 
             # push back?
-            if state.player == 0 and board.hands[0] == []:
+            if state.player == state.starting_player and board.hands[state.starting_player] == []:
                 state.ended = True
                 state.winner = None
 

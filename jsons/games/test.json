@@ -70,6 +70,7 @@
     ]
   },
   "state": {
+    "starting_player": 0,
     "player": 0,
     "bomb_increment": 0,
     "go_histories": [

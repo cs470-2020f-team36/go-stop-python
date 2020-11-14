@@ -65,6 +65,7 @@ class State:
         Who won the game, if it is ended.
         """
 
+        self.starting_player = player
         self.player = player
         self.bomb_increment = 0
         self.go_histories = [[], []]
@@ -84,6 +85,7 @@ class State:
         """
 
         return {
+            "starting_player": self.starting_player,
             "player": self.player,
             "bomb_increment": self.bomb_increment,
             "go_histories": self.go_histories,
@@ -138,6 +140,7 @@ class State:
 
         state = State()
 
+        state.starting_player = data["starting_player"]
         state.player = data["player"]
         state.bomb_increment = data["bomb_increment"]
         state.go_histories = data["go_histories"]
