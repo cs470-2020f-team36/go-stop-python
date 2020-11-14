@@ -82,7 +82,6 @@ class Logger:
 
     def log(self, kind: str, arg: Any = None):
         self.logs.append(LoggerItem(kind, arg))
-        print(str(LoggerItem(kind, arg)))
 
     def __str__(self):
         return "[{}]".format(", ".join([str(item) for item in self.logs]))

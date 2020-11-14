@@ -680,7 +680,6 @@ class Game(Setting):
                 assert len(captures_after) == 2
 
                 # capture all
-                print("bonus_captures", bonus_captures)
                 self._append_to_capture_field(bonus_captures + captures_after)
 
             elif len(captures_before) == 2 and captures_after == []:
