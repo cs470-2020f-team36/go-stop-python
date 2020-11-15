@@ -423,11 +423,14 @@ class Game(Setting):
                 state.score_factors[state.player] = [
                     ScoreFactor("four of a month")
                 ]
+                self.logger.log("shaking", CardList(cards))
 
                 return True
 
-            if len(board.hands[0]) == 10:
-                state.player = 0
+            if state.player != state.starting_player:
+                self.logger.log("turn change", (state.player, state.starting_player))
+                state.player = state.starting_player
+
 
             return True
 
