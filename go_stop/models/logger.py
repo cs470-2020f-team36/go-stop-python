@@ -22,7 +22,7 @@ class LoggerItem:
         "move animal 9",  # arg: None
         "clear",  # arg: None
         "go",  # arg: bool
-        "four of a month",  # arg: bool
+        "four of a month",  # arg: CardList
     }
 
     def __init__(self, kind: str, arg):
@@ -76,7 +76,7 @@ class LoggerItem:
         if self.kind == "go":
             return "GO" if self.arg else "STOP"
         if self.kind == "four of a month":
-            return "FOUR OF A MONTH: {}".format(self.arg)
+            return "FOUR OF A MONTH: {}".format(str(self.arg))
 
 
 class Logger:

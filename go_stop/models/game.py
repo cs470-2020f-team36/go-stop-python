@@ -387,7 +387,10 @@ class Game(Setting):
             state.player = 1 - state.player
 
             # push back?
-            if state.player == state.starting_player and board.hands[state.starting_player] == []:
+            if (
+                state.player == state.starting_player
+                and board.hands[state.starting_player] == []
+            ):
                 state.ended = True
                 state.winner = None
 
@@ -423,14 +426,20 @@ class Game(Setting):
                 state.score_factors[state.player] = [
                     ScoreFactor("four of a month")
                 ]
-                self.logger.log("shaking", CardList(cards))
+                self.logger.log(
+                    "four of a month",
+                    go_stop_cards.of_month(
+                        board.four_of_a_month()[state.player][0]
+                    ),
+                )
 
                 return True
 
             if state.player != state.starting_player:
-                self.logger.log("turn change", (state.player, state.starting_player))
+                self.logger.log(
+                    "turn change", (state.player, state.starting_player)
+                )
                 state.player = state.starting_player
-
 
             return True
 
@@ -475,7 +484,10 @@ class Game(Setting):
             state.player = 1 - state.player
 
             # push back?
-            if state.player == state.starting_player and board.hands[state.starting_player] == []:
+            if (
+                state.player == state.starting_player
+                and board.hands[state.starting_player] == []
+            ):
                 state.ended = True
                 state.winner = None
 
@@ -788,9 +800,7 @@ class Game(Setting):
             self.logger.log("take junk from opponent", junk)
 
     def _calculate_scores(self, without_multiples: bool = False):
-        kinds = [
-            f.kind for f in self.state.score_factors[self.state.player]
-        ]
+        kinds = [f.kind for f in self.state.score_factors[self.state.player]]
         if "four of a month" in kinds or "three stackings" in kinds:
             self.state.scores = [
                 Scorer.calculate(self.state, player) for player in [0, 1]
