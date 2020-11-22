@@ -429,7 +429,7 @@ class Game(Setting):
                 self.logger.log(
                     "four of a month",
                     go_stop_cards.of_month(
-                        board.four_of_a_month()[state.player][0]
+                        list(board.four_of_a_month()[state.player])[0]
                     ),
                 )
 
