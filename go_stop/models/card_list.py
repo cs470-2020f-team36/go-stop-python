@@ -18,18 +18,19 @@ class CardList(list):
     def apply_filter(self, predicate: Callable[[Card], bool]):
         return CardList(card for card in self if predicate(card))
 
-    def apply_map(self, func: Callable[[Card], Any]):
-        return CardList(func(card) for card in self)
-
     def of_month(self, month: int):
         return self.apply_filter(lambda card: card.month == month)
 
     def except_month(self, month: int):
         return self.apply_filter(lambda card: card.month != month)
 
+    def sorted(self) -> "CardList":
+        self.sort()
+        return self
+
     def serialize(self) -> List[str]:
         return [card.serialize() for card in self]
 
     @staticmethod
-    def deserialize(data):
+    def deserialize(data) -> "CardList":
         return CardList(Card.deserialize(card) for card in data)

@@ -22,7 +22,7 @@ class Room:
         # f = open("./jsons/games/test.json")
         # data = json.load(f)
         # self.game = Game.deserialize(data)
-        
+
         # Normal play
         random.shuffle(self.players)
         self.game = Game()

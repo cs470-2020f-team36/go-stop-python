@@ -54,10 +54,10 @@ class RoomList(list):
             }
 
         room = self.find_by_room_id(room_id)
-        if room == None:
+        if room is None:
             return {
                 "success": False,
-                "error": f"There is no room with room id {room.id}",
+                "error": f"There is no room with room id {id}",
                 "errorCode": 3,
             }
 
@@ -80,21 +80,22 @@ class RoomList(list):
                 "errorCode": 1,
             }
 
-        if self.find_by_client_id(id) == None:
+        room = self.find_by_client_id(id)
+
+        if room is None:
             return {
                 "success": False,
                 "error": "The client is not in any room",
                 "errorCode": 2,
             }
 
-        room = self.find_by_client_id(id)
         room.exit(id)
-        
+
         del self.client_to_room[id]
 
         if len(room.players) == 0:
             self.remove(room)
-        
+
         return {"success": True}
 
     def start_game(self, id: str) -> dict:
@@ -106,7 +107,7 @@ class RoomList(list):
             }
 
         room = self.find_by_client_id(id)
-        if room == None:
+        if room is None:
             return {
                 "success": False,
                 "error": "The client is not in any room",
@@ -139,14 +140,14 @@ class RoomList(list):
             }
 
         room = self.find_by_client_id(id)
-        if room == None:
+        if room is None:
             return {
                 "success": False,
                 "error": "The client is not in any room",
                 "errorCode": 2,
             }
 
-        if room.game == None:
+        if room.game is None:
             return {
                 "success": False,
                 "error": "The game has not been started",

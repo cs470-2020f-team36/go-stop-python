@@ -1,11 +1,15 @@
 from functools import reduce
+from typing import Any, List, cast
+
 from .state import State
 
 
 class Scorer:
     @staticmethod
     def calculate(state: State, player: int):
-        return reduce(
-            lambda a, f: f(a),
-            [0] + [factor.score for factor in state.score_factors[player]],
-        )
+        result = 0
+
+        for factor in state.score_factors[player]:
+            result = factor.score(result)
+
+        return result

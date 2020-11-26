@@ -2,24 +2,10 @@ import random
 from copy import copy, deepcopy
 from itertools import groupby
 import json
-from typing import List, Union
+from typing import Any, List, Optional, Tuple, Union, cast
+from typing_extensions import Literal
 
-from .card import (
-    Card,
-    BrightCard,
-    AnimalCard,
-    RibbonCard,
-    BonusCard,
-    SpecialCard,
-)
-from .card_list import CardList
 from ..constants.card import go_stop_cards
-
-from .setting import Setting
-from .board import Board
-from .state import State
-from .flags import Flags
-from .logger import Logger
 from .action import (
     Action,
     ActionThrow,
@@ -32,12 +18,26 @@ from .action import (
     ActionGo,
     ActionMoveAnimal9,
 )
+from .board import Board
+from .card import (
+    Card,
+    BrightCard,
+    AnimalCard,
+    RibbonCard,
+    BonusCard,
+    SpecialCard,
+)
+from .card_list import CardList
+from .flags import Flags
+from .logger import Logger
 from .scorer import Scorer
 from .score_factor import ScoreFactor
+from .setting import Setting
+from .state import State
 
 
 class Game(Setting):
-    def __init__(self, player: int = 0):
+    def __init__(self, player: Literal[0, 1] = 0):
         super().__init__()
 
         self.board = Board(player)
@@ -78,7 +78,11 @@ class Game(Setting):
                 self.board = Board()
                 four_of_a_month = self.board.four_of_a_month()
 
-        p = [player for player in {0, 1} if len(four_of_a_month[player]) > 0]
+        p = [
+            cast(Literal[0, 1], player)
+            for player in {0, 1}
+            if len(four_of_a_month[player]) > 0
+        ]
         if len(p) == 1:
             self.state.player = p[0]
             self.flags.four_of_a_month = True
@@ -104,8 +108,8 @@ class Game(Setting):
             return [ActionGo(option) for option in {True, False}]
 
         if flags.select_match:
-            assert state.select_match != None
-            _, matches, _ = state.select_match
+            assert state.select_match is not None
+            _, matches, _ = cast(Tuple[Card, CardList, Any], state.select_match)
             return [ActionSelectMatch(match) for match in matches]
 
         if flags.shaking:
@@ -117,7 +121,7 @@ class Game(Setting):
         # normal play
 
         # shaking
-        months_in_hand = [card.month for card in hand if card.month != None]
+        months_in_hand = [card.month for card in hand if card.month is not None]
         months_in_hand.sort()
         center_field_months = [
             month for month in range(1, 13) if board.center_field[month] != []
@@ -134,7 +138,7 @@ class Game(Setting):
             item for sublist in board.center_field.values() for item in sublist
         ]
         months_in_combined_hand = [
-            card.month for card in combined_hand if card.month != None
+            card.month for card in combined_hand if card.month is not None
         ]
         months_in_combined_hand.sort()
 
@@ -145,12 +149,15 @@ class Game(Setting):
         ]
 
         return (
-            [
-                ActionThrow(card)
-                for card in hand
-                if card.month not in shakable_months + bomb_months
-                and card.kind != "bomb"
-            ]
+            cast(
+                List[Action],
+                [
+                    ActionThrow(card)
+                    for card in hand
+                    if card.month not in shakable_months + bomb_months
+                    and card.kind != "bomb"
+                ],
+            )
             + (
                 [ActionThrowBomb()]
                 if any(card.kind == "bomb" for card in hand)
@@ -181,24 +188,24 @@ class Game(Setting):
             # handles events on "throw" until flipping
             if action.kind == "throw" or action.kind == "throw bomb":
                 if action.kind == "throw bomb":
-                    action = ActionThrow(
-                        next(
-                            (
-                                c
-                                for c in board.hands[state.player]
-                                if c.kind == "bomb"
-                            ),
-                            None,
-                        )
+                    card: Card = next(
+                        (
+                            c
+                            for c in board.hands[state.player]
+                            if c.kind == "bomb"
+                        ),
+                        cast(Any, None),
                     )
+                    action = ActionThrow(card)
 
+                action = cast(ActionThrow, action)
                 board.hands[state.player].remove(action.card)
                 self.logger.log("throw", action.card)
 
                 # if the player threw a bonus card
                 if action.card.kind == "bonus":
                     # append it to the capture field
-                    self._append_to_capture_field([action.card])
+                    self._append_to_capture_field(CardList([action.card]))
 
                     # take junk from the opponent
                     self._take_junk_from_opponent(
@@ -207,7 +214,7 @@ class Game(Setting):
 
                     # append the flipped card to the hand
                     flipped = self._flip_card()
-                    self._append_to_hand([flipped])
+                    self._append_to_hand(CardList([flipped]))
                     self._calculate_scores(without_multiples=True)
 
                     return True
@@ -218,7 +225,7 @@ class Game(Setting):
                 )
 
                 # if it signals to terminate `self.play`, terminate it.
-                if captures_before == None:
+                if captures_before is None:
                     return True
 
                 (
@@ -283,13 +290,18 @@ class Game(Setting):
                     return True
 
             elif action.kind == "select match":
-                card, matches, arg = state.select_match
+                action = cast(ActionSelectMatch, action)
+                assert state.select_match is not None
+                card, matches, arg = cast(
+                    Tuple[Card, CardList, Any], state.select_match
+                )
                 assert action.match in matches
 
-                if arg == None:
+                if arg is None:
                     # before flip
+                    assert card.month is not None
 
-                    captures_before = [card, action.match]
+                    captures_before = CardList([card, action.match])
                     self.logger.log("select match", (card, action.match))
                     board.center_field[card.month].remove(action.match)
 
@@ -306,7 +318,7 @@ class Game(Setting):
                     if not continues:
                         return True
 
-                if arg != None:
+                if arg is not None:
                     # after flip
                     (
                         card,
@@ -315,8 +327,10 @@ class Game(Setting):
                         bonus_captures,
                         junk_count,
                     ) = arg
-                    captures_after = [flipped, action.match]
+                    captures_after = CardList([flipped, action.match])
                     self.logger.log("select match", (flipped, action.match))
+
+                    assert flipped.month is not None
                     board.center_field[flipped.month].remove(action.match)
 
                     state.select_match = None
@@ -331,8 +345,14 @@ class Game(Setting):
             #     that increment of junk count should be reversed.
             # in this case, self._check_after_flip(...) will return
             # `-self.junk_card_from_bonus_card` to reverse it.
+
+            captures_before = cast(CardList, captures_before)
+            captures_after = cast(CardList, captures_after)
+
             junk_count += self._check_after_flip(
-                action.card if action.kind == "throw" else None,
+                cast(ActionThrow, action).card
+                if action.kind == "throw"
+                else None,
                 captures_before,
                 flipped,
                 bonus_captures,
@@ -351,7 +371,7 @@ class Game(Setting):
             # check move_animal_9
             if (
                 AnimalCard(9) in board.capture_fields[state.player]
-                and state.animal_9_moved == None
+                and state.animal_9_moved is None
             ):
                 # first, check the score of the player
                 state.animal_9_moved = True
@@ -384,7 +404,7 @@ class Game(Setting):
 
             # pass the turn
             self.logger.log("turn change", (state.player, 1 - state.player))
-            state.player = 1 - state.player
+            state.player = cast(Literal[0, 1], 1 - state.player)
 
             # push back?
             if (
@@ -397,7 +417,9 @@ class Game(Setting):
             return True
 
         if action.kind == "shaking":
-            card, cards = state.shaking
+            action = cast(ActionShaking, action)
+
+            card, cards = cast(Tuple[Card, CardList], state.shaking)
 
             flags.shaking = False
             state.shaking = None
@@ -409,6 +431,8 @@ class Game(Setting):
             return self.play(ActionThrow(card), pass_check=True)
 
         if action.kind == "shakable":
+            action = cast(ActionShakable, action)
+
             flags.shaking = True
             state.shaking = (
                 action.card,
@@ -418,6 +442,8 @@ class Game(Setting):
             return True
 
         if action.kind == "four of a month":
+            action = cast(ActionFourOfAMonth, action)
+
             flags.four_of_a_month = False
 
             if action.option:
@@ -444,6 +470,8 @@ class Game(Setting):
             return True
 
         if action.kind == "go":
+            action = cast(ActionGo, action)
+
             flags.go = False
 
             if action.option:
@@ -457,6 +485,8 @@ class Game(Setting):
                 return True
 
         if action.kind == "move animal 9":
+            action = cast(ActionMoveAnimal9, action)
+
             state.animal_9_moved = action.option
             flags.move_animal_9 = False
             self.logger.log("move animal 9", action.option)
@@ -481,7 +511,7 @@ class Game(Setting):
 
             # pass the turn
             self.logger.log("turn change", (state.player, 1 - state.player))
-            state.player = 1 - state.player
+            state.player = cast(Literal[0, 1], 1 - state.player)
 
             # push back?
             if (
@@ -492,6 +522,8 @@ class Game(Setting):
                 state.winner = None
 
             return True
+
+        assert False
 
     def _append_to_hand(self, cards: CardList) -> None:
         """
@@ -512,7 +544,10 @@ class Game(Setting):
             return
 
         # cards should have the same month except bonus cards
-        assert len(set(card.month for card in cards if card.month != None)) == 1
+        assert (
+            len(set(card.month for card in cards if card.month is not None))
+            == 1
+        )
         month = cards[0].month
 
         self.board.center_field[month].extend(cards)
@@ -538,12 +573,12 @@ class Game(Setting):
 
     def _throw_card(
         self, card: Card, before_or_after: str
-    ) -> (Union[CardList, None], int):
+    ) -> Tuple[Optional[CardList], int]:
         """
         Throw a card (or a bomb), and returns
         (captures: CardList | None, junk_count: int).
 
-        If captures == None, it means
+        If captures is None, it means
         `self.play(action)` should be terminated (with some flags set).
 
         junk_count means the number of junks taken from the opponent.
@@ -559,7 +594,7 @@ class Game(Setting):
         if card.kind == "bomb":
             return (captures, 0)
 
-        assert card.month != None
+        assert card.month is not None
 
         center_field_of_month = board.center_field[card.month]
         if center_field_of_month == []:
@@ -586,11 +621,11 @@ class Game(Setting):
             # else, set the select match flag
             else:
                 flags.select_match = True
-                state.select_match = [
+                state.select_match = (
                     card,
                     center_field_of_month,
                     None,
-                ]
+                )
                 self.logger.log("double matches", (card, center_field_of_month))
                 return (None, 0)
 
@@ -609,7 +644,7 @@ class Game(Setting):
             board.center_field[card.month] = CardList()
 
         else:
-            raise "Something wrong!"
+            raise Exception("Something wrong!")
 
         return (captures, junk_count)
 
@@ -618,7 +653,7 @@ class Game(Setting):
         self.logger.log("flip", card)
         return card
 
-    def _flip_card_until_normal(self) -> (Card, CardList, int):
+    def _flip_card_until_normal(self) -> Tuple[Card, CardList, int]:
         flipped = self._flip_card()
         bonus_captures = CardList()
         junk_count = 0
@@ -636,7 +671,7 @@ class Game(Setting):
         action: Action,
         captures_before: CardList,
         junk_count_before: int,
-    ) -> (bool, Card, CardList, CardList, int):
+    ) -> Tuple[bool, Card, CardList, Optional[CardList], int]:
         # action, captures_before, junk_count_before -> continues, flipped, bonus_captures, captures_after, junk_count
 
         # flip the card on top of the drawing pile
@@ -654,13 +689,20 @@ class Game(Setting):
         junk_count = junk_count_before + junk_count_flip + junk_count_after
 
         # if it signals to terminate `self.play`, terminate it.
-        if captures_after == None:
-            self.state.select_match[2] = (
-                action.card if action.kind == "throw" else None,
-                CardList(captures_before),
-                flipped,
-                CardList(bonus_captures),
-                junk_count,
+        if captures_after is None:
+            assert self.state.select_match is not None
+            self.state.select_match = (
+                self.state.select_match[0],
+                self.state.select_match[1],
+                (
+                    cast(ActionThrow, action).card
+                    if action.kind == "throw"
+                    else None,
+                    CardList(captures_before),
+                    flipped,
+                    CardList(bonus_captures),
+                    junk_count,
+                ),
             )
             return (False, flipped, bonus_captures, captures_after, junk_count)
 
@@ -668,7 +710,7 @@ class Game(Setting):
 
     def _check_after_flip(
         self,
-        card: Card,
+        card: Optional[Card],
         captures_before: CardList,
         flipped: Card,
         bonus_captures: CardList,
@@ -680,7 +722,7 @@ class Game(Setting):
         junk_count = 0
 
         if (
-            card != None
+            card is not None
             and flipped.month == card.month
             and isinstance(card.month, int)
         ):
@@ -695,16 +737,19 @@ class Game(Setting):
                 assert len(captures_after) == 2
 
                 # capture all
-                self._append_to_capture_field(bonus_captures + captures_after)
+                self._append_to_capture_field(
+                    CardList(bonus_captures + captures_after)
+                )
 
             elif len(captures_before) == 2 and captures_after == []:
                 # stacking except the last turn
                 if board.hands[state.player] != []:
                     self._append_to_center_field(
-                        captures_before + bonus_captures
+                        CardList(captures_before + bonus_captures)
                     )
                     last = board.center_field[card.month].pop(0)
                     board.center_field[card.month].append(last)
+                    assert flipped.month is not None
                     state.stacking_histories[state.player].add(flipped.month)
                     self.logger.log("stacking", board.center_field[card.month])
                     junk_count -= self.junk_card_from_bonus_card * len(
@@ -722,21 +767,22 @@ class Game(Setting):
 
                 else:
                     self._append_to_capture_field(
-                        captures_before + bonus_captures
+                        CardList(captures_before + bonus_captures)
                     )
 
             elif len(captures_before) == 2 and len(captures_after) == 2:
                 # ttadak
                 self.logger.log("ttadak", card.month)
                 self._append_to_capture_field(
-                    captures_before + bonus_captures + captures_after
+                    CardList(captures_before + bonus_captures + captures_after)
                 )
+                assert flipped.month is not None
                 state.stacking_histories[state.player].add(flipped.month)
                 junk_count += self.junk_card_from_ttadak
 
         else:
             self._append_to_capture_field(
-                captures_before + bonus_captures + captures_after
+                CardList(captures_before + bonus_captures + captures_after)
             )
 
         if (
@@ -949,7 +995,7 @@ class Game(Setting):
         self._calculate_scores(without_multiples=True)
         state.go_histories[state.player][-1] = self.state.scores[state.player]
 
-        state.player = 1 - state.player
+        state.player = cast(Literal[0, 1], 1 - state.player)
 
         self.logger.log("go", True)
 
@@ -965,7 +1011,7 @@ class Game(Setting):
 
         # move animal 9 if it is not queried for the opponent
         if (
-            state.animal_9_moved == None
+            state.animal_9_moved is None
             and AnimalCard(9) in board.capture_fields[1 - state.player]
         ):
             state.animal_9_moved = True

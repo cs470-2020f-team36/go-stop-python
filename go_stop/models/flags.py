@@ -18,8 +18,8 @@ class Flags:
         """
         Deserialize the flags.
         """
-        
+
         flags = Flags()
         flags.__dict__ = data
-        
+
         return flags

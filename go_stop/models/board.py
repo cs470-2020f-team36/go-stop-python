@@ -1,11 +1,13 @@
-from typing import List, Set
-import json
 from copy import copy, deepcopy
+import json
 import random
+from typing import List, Set, Tuple
+
 from ..constants.card import go_stop_cards
 from .card import Card, BrightCard, AnimalCard, RibbonCard, JunkCard, BonusCard
 from .card_list import CardList
 from .setting import Setting
+
 
 class Board(Setting):
     """
@@ -47,7 +49,9 @@ class Board(Setting):
 
         self.sort()
 
-    def _move_cards_at_beginning(self, player: int, center_field: CardList) -> CardList:
+    def _move_cards_at_beginning(
+        self, player: int, center_field: CardList
+    ) -> CardList:
         """
         A private method which moves bonus cards and four-of-a-months
         at the beginning to the first player.
@@ -83,7 +87,9 @@ class Board(Setting):
                     cards = self.drawing_pile[0:4]
                     center_field.extend(cards)
                     self.drawing_pile = self.drawing_pile[4:]
-                    self.capture_fields[player].extend(go_stop_cards.of_month(month))
+                    self.capture_fields[player].extend(
+                        go_stop_cards.of_month(month)
+                    )
                     changed = True
 
         if changed:
@@ -91,12 +97,12 @@ class Board(Setting):
 
         return center_field
 
-    def four_of_a_month(self) -> List[Set[int]]:
+    def four_of_a_month(self) -> Tuple[Set[int], Set[int]]:
         """
         Returns information about which four-of-a-months are attained by players.
         """
 
-        four_of_a_month = [set(), set()]
+        four_of_a_month: Tuple[Set[int], Set[int]] = (set(), set())
 
         for player in {0, 1}:
             for month in range(1, 13):
@@ -110,22 +116,6 @@ class Board(Setting):
     def sort(self) -> None:
         for player in {0, 1}:
             self.hands[player].sort()
-
-    def render(self, mode: str) -> None:
-        """
-        Render the board.
-        """
-
-        if mode == "text":
-            for player in {0, 1}:
-                print("P{}의 패:".format(player), self.hands[player])
-                print("P{}이 얻은 패:".format(player), self.capture_fields[player])
-            print("깔린 패:")
-            for month in range(1, 13):
-                print(
-                    "{}: {}".format(month, CardList(self.center_field[month]))
-                )
-            print("패 더미:", self.drawing_pile)
 
     def serialize(self) -> dict:
         """

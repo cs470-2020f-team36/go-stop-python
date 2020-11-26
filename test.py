@@ -1,12 +1,8 @@
-"""
-Test code
-"""
-
-# import packages
 import json
+
+from go_stop.models.action import ActionThrow
+from go_stop.models.card import BonusCard, BrightCard, JunkCard
 from go_stop.models.game import Game
-from go_stop.models.action import *
-from go_stop.models.card import *
 
 
 def show_separator():

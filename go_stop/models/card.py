@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 import calendar
 from typing import Any, Optional
+from typing_extensions import Literal
 
 
 class Card(ABC):
@@ -14,11 +15,7 @@ class Card(ABC):
         self.index = index
 
     @abstractmethod
-    def render(self, mode: str):
-        """
-        Renders the card.
-        """
-
+    def __str__(self):
         pass
 
     def __eq__(self, obj: Any):
@@ -31,9 +28,6 @@ class Card(ABC):
 
     def __hash__(self):
         return hash((self.kind, self.month, self.index))
-
-    def __str__(self):
-        return self.render("text")
 
     def _to_level(self):
         """
@@ -58,6 +52,71 @@ class Card(ABC):
         assert isinstance(obj, Card)
         return self._to_level() < obj._to_level()
 
+    def serialize(self: "Card") -> str:
+        """
+        Serialize a card.
+        """
+
+        if self.kind == "bright":
+            assert self.month is not None
+            return "B{:02d}".format(self.month)
+
+        if self.kind == "animal":
+            assert self.month is not None
+            return "A{:02d}".format(self.month)
+
+        if self.kind == "ribbon":
+            assert self.month is not None
+            return "R{:02d}".format(self.month)
+
+        if self.kind == "junk":
+            assert self.month is not None
+            return "J{:02d}{}".format(self.month, self.index)
+
+        if self.kind == "bonus":
+            assert isinstance(self, BonusCard)
+            # pylint: disable=no-member
+            return "+{}".format(self.multiple)
+
+        if self.kind == "bomb":
+            return "*{}".format(self.index)
+
+        return "?"
+
+    @staticmethod
+    def deserialize(serial: str) -> "Card":
+        """
+        Deserialize to a card.
+        """
+
+        if serial[0] == "B":
+            return BrightCard(int(serial[1:]))
+
+        if serial[0] == "A":
+            return AnimalCard(int(serial[1:]))
+
+        if serial[0] == "R":
+            return RibbonCard(int(serial[1:]))
+
+        if serial[0] == "J":
+            month = int(serial[1:3])
+            if month <= 10:
+                return JunkCard(month, index=int(serial[3]))
+            if month == 11:
+                index = int(serial[3])
+                multiple = 2 if index == 2 else 1
+                return JunkCard(11, index=index, multiple=multiple)
+            if month == 12:
+                return JunkCard(12, index=0, multiple=2)
+
+        if serial[0] == "+":
+            return BonusCard(int(serial[1:]))
+
+        if serial[0] == "*":
+            return SpecialCard("bomb", int(serial[1:]))
+
+        assert False
+
 
 class BrightCard(Card):
     months = {1, 3, 8, 11, 12}
@@ -66,11 +125,8 @@ class BrightCard(Card):
         assert month in BrightCard.months
         super().__init__("bright", month, 0)
 
-    def render(self, mode: str):
-        if mode == "text":
-            return "{}월 광".format(self.month)
-        else:
-            raise NotImplementedError
+    def __str__(self):
+        return "{}월 광".format(self.month)
 
 
 class AnimalCard(Card):
@@ -80,11 +136,8 @@ class AnimalCard(Card):
         assert month in AnimalCard.months
         super().__init__("animal", month, 0)
 
-    def render(self, mode: str):
-        if mode == "text":
-            return "{}월 열끗".format(self.month)
-        else:
-            raise NotImplementedError
+    def __str__(self):
+        return "{}월 열끗".format(self.month)
 
 
 class RibbonCard(Card):
@@ -95,7 +148,7 @@ class RibbonCard(Card):
         super().__init__("ribbon", month, 0)
 
         if month in {1, 2, 3}:
-            self.ribbon_color = "red"
+            self.ribbon_color: Optional[Literal["red", "blue", "plant"]] = "red"
         elif month in {4, 5, 7}:
             self.ribbon_color = "plant"
         elif month in {6, 9, 10}:
@@ -103,16 +156,13 @@ class RibbonCard(Card):
         else:
             self.ribbon_color = None
 
-    def render(self, mode: str):
-        if mode == "text":
-            translation = {"blue": "청", "red": "홍", "plant": "초"}
-            return "{}월 단".format(self.month) + (
-                " ({}단)".format(translation[self.ribbon_color])
-                if self.ribbon_color != None
-                else ""
-            )
-        else:
-            raise NotImplementedError
+    def __str__(self):
+        translation = {"blue": "청", "red": "홍", "plant": "초"}
+        return "{}월 단".format(self.month) + (
+            " ({}단)".format(translation[self.ribbon_color])
+            if self.ribbon_color != None
+            else ""
+        )
 
 
 class JunkCard(Card):
@@ -130,16 +180,13 @@ class JunkCard(Card):
         self.multiple = multiple
         super().__init__("junk", month, index)
 
-    def render(self, mode: str):
-        if mode == "text":
-            translation = {1: "", 2: "쌍"}
-            return "{}월 {}피{}".format(
-                self.month,
-                translation[self.multiple],
-                " ({})".format(self.index) if self.multiple == 1 else "",
-            )
-        else:
-            raise NotImplementedError
+    def __str__(self):
+        translation = {1: "", 2: "쌍"}
+        return "{}월 {}피{}".format(
+            self.month,
+            translation[self.multiple],
+            " ({})".format(self.index) if self.multiple == 1 else "",
+        )
 
 
 class BonusCard(Card):
@@ -149,12 +196,9 @@ class BonusCard(Card):
         self.multiple = multiple
         super().__init__("bonus", None, multiple - 2)
 
-    def render(self, mode: str):
-        if mode == "text":
-            translation = {2: "투", 3: "쓰리"}
-            return "보너스 {}피".format(translation[self.multiple])
-        else:
-            raise NotImplementedError
+    def __str__(self):
+        translation = {2: "투", 3: "쓰리"}
+        return "보너스 {}피".format(translation[self.multiple])
 
 
 class SpecialCard(Card):
@@ -162,61 +206,5 @@ class SpecialCard(Card):
         assert kind in {"hidden", "bomb"}
         super().__init__(kind, None, index)
 
-    def render(self, mode: str):
-        if mode == "text":
-            return "뒷면" if self.kind == "hidden" else "폭탄 {}".format(self.index)
-        else:
-            raise NotImplementedError
-
-
-def _serialize_card(card: Card) -> str:
-    """
-    Serialize a card.
-    """
-
-    if card.kind == "bright":
-        return "B{:02d}".format(card.month)
-    if card.kind == "animal":
-        return "A{:02d}".format(card.month)
-    if card.kind == "ribbon":
-        return "R{:02d}".format(card.month)
-    if card.kind == "junk":
-        return "J{:02d}{}".format(card.month, card.index)
-    if card.kind == "bonus":
-        return "+{}".format(card.multiple)
-    if card.kind == "bomb":
-        return "*{}".format(card.index)
-    return "?"
-
-
-def _deserialize_card(serial: str) -> Card:
-    """
-    Deserialize to a card.
-    """
-
-    assert serial[0] in "BARJ+*"
-
-    if serial[0] == "B":
-        return BrightCard(int(serial[1:]))
-    if serial[0] == "A":
-        return AnimalCard(int(serial[1:]))
-    if serial[0] == "R":
-        return RibbonCard(int(serial[1:]))
-    if serial[0] == "J":
-        month = int(serial[1:3])
-        if month <= 10:
-            return JunkCard(month, index=int(serial[3]))
-        if month == 11:
-            index = int(serial[3])
-            multiple = 2 if index == 2 else 1
-            return JunkCard(11, index=index, multiple=multiple)
-        if month == 12:
-            return JunkCard(12, index=0, multiple=2)
-    if serial[0] == "+":
-        return BonusCard(int(serial[1:]))
-    if serial[0] == "*":
-        return SpecialCard("bomb", int(serial[1:]))
-
-
-Card.serialize = _serialize_card
-Card.deserialize = _deserialize_card
+    def __str__(self):
+        return "뒷면" if self.kind == "hidden" else "폭탄 {}".format(self.index)

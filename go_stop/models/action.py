@@ -1,7 +1,22 @@
-from typing import Any
 from abc import ABC, abstractmethod
+from typing import Any, List, Set
+from typing_extensions import Literal
+
 from .card import Card, SpecialCard
 from ..constants.card import go_stop_cards
+
+
+Kind = Literal[
+    "throw",
+    "throw bomb",
+    "bomb",
+    "shakable",
+    "shaking",
+    "select match",
+    "four of a month",
+    "go",
+    "move animal 9",
+]
 
 
 class Action(ABC):
@@ -11,7 +26,7 @@ class Action(ABC):
     There are maximum 167 (50 + 1 + 12 + 48 + 2 + 48 + 2 + 2 + 2) possible actions.
     """
 
-    kinds = {
+    kinds: Set[Kind] = {
         "throw",
         "throw bomb",
         "bomb",
@@ -23,15 +38,24 @@ class Action(ABC):
         "move animal 9",
     }
 
-    def __init__(self, kind: str, arg: Any):
+    all_actions: List["Action"]
+
+    def __init__(self, kind: Kind, arg: Any):
         self.kind = kind
         self.arg = arg
 
-    def __eq__(self, obj: Any):
+    def __eq__(self, obj: object):
         return (
             isinstance(obj, Action)
             and obj.kind == self.kind
             and obj.arg == self.arg
+        )
+
+    def __str__(self):
+        return (
+            f"{self.kind} {str(self.arg)}"
+            if self.arg is not None
+            else self.kind
         )
 
     @abstractmethod
@@ -42,22 +66,32 @@ class Action(ABC):
     def deserialize(data: dict):
         if data["kind"] == "throw":
             return ActionThrow(Card.deserialize(data["card"]))
+
         if data["kind"] == "throw bomb":
             return ActionThrowBomb()
+
         if data["kind"] == "bomb":
             return ActionBomb(data["month"])
+
         if data["kind"] == "shakable":
             return ActionShakable(Card.deserialize(data["card"]))
+
         if data["kind"] == "shaking":
             return ActionShaking(data["option"])
+
         if data["kind"] == "select match":
             return ActionSelectMatch(Card.deserialize(data["match"]))
+
         if data["kind"] == "four of a month":
             return ActionFourOfAMonth(data["option"])
+
         if data["kind"] == "move animal 9":
             return ActionMoveAnimal9(data["option"])
+
         if data["kind"] == "go":
             return ActionGo(data["option"])
+
+        assert False
 
 
 class ActionThrow(Action):
@@ -79,7 +113,7 @@ class ActionThrowBomb(Action):
     """
 
     def __init__(self):
-        super().__init__("throw bomb",  None)
+        super().__init__("throw bomb", None)
 
     def serialize(self) -> dict:
         return {"kind": self.kind}
