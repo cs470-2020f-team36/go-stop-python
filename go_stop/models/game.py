@@ -1,8 +1,5 @@
-import random
-from copy import copy, deepcopy
 from itertools import groupby
-import json
-from typing import Any, List, Optional, Tuple, Union, cast
+from typing import Any, List, Optional, Tuple, cast
 from typing_extensions import Literal
 
 from ..constants.card import go_stop_cards
@@ -221,7 +218,7 @@ class Game(Setting):
 
                 # elsewise, throw a card (or a bomb)
                 (captures_before, junk_count_before) = self._throw_card(
-                    action.card, "before"
+                    action.card
                 )
 
                 # if it signals to terminate `self.play`, terminate it.
@@ -272,7 +269,7 @@ class Game(Setting):
                     state.bomb_increment += 1
 
                 # empty the center field of corresponding month
-                board.center_field[month] = []
+                board.center_field[month] = CardList()
 
                 # append to shaking history
                 state.shaking_histories[state.player].append(bombed_cards)
@@ -432,6 +429,7 @@ class Game(Setting):
 
         if action.kind == "shakable":
             action = cast(ActionShakable, action)
+            assert action.card.month is not None
 
             flags.shaking = True
             state.shaking = (
@@ -571,9 +569,7 @@ class Game(Setting):
 
         self.board.sort()
 
-    def _throw_card(
-        self, card: Card, before_or_after: str
-    ) -> Tuple[Optional[CardList], int]:
+    def _throw_card(self, card: Card) -> Tuple[Optional[CardList], int]:
         """
         Throw a card (or a bomb), and returns
         (captures: CardList | None, junk_count: int).
@@ -683,7 +679,7 @@ class Game(Setting):
         ) = self._flip_card_until_normal()
 
         # throw the flipped normal card
-        (captures_after, junk_count_after) = self._throw_card(flipped, "after")
+        (captures_after, junk_count_after) = self._throw_card(flipped)
 
         # sum all junk counts
         junk_count = junk_count_before + junk_count_flip + junk_count_after
@@ -870,7 +866,7 @@ class Game(Setting):
 
         # five brights
         if bright_point == 5:
-            bright_point == 15
+            bright_point = 15
 
         self.state.score_factors[self.state.player].append(
             ScoreFactor("bright", bright_point)

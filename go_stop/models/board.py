@@ -1,10 +1,9 @@
-from copy import copy, deepcopy
-import json
+from copy import copy
 import random
-from typing import List, Set, Tuple
+from typing import Dict, List, Set, Tuple
 
 from ..constants.card import go_stop_cards
-from .card import Card, BrightCard, AnimalCard, RibbonCard, JunkCard, BonusCard
+from .card import Card, BonusCard
 from .card_list import CardList
 from .setting import Setting
 
@@ -18,29 +17,29 @@ class Board(Setting):
         super().__init__()
 
         # shuffle the drawing pile
-        self.drawing_pile = copy(go_stop_cards)
+        self.drawing_pile: CardList = copy(go_stop_cards)
         random.shuffle(self.drawing_pile)
 
         # hands
-        self.hands = [
+        self.hands: List[CardList] = [
             self.drawing_pile[0:10],
             self.drawing_pile[10:20],
         ]
 
         # center field
-        center_field = self.drawing_pile[20:28]
+        center_field: CardList = self.drawing_pile[20:28]
 
-        # drawing pile
+        # remaining drawing pile
         self.drawing_pile = self.drawing_pile[28:]
 
         # capture fields
-        self.capture_fields = [CardList(), CardList()]
+        self.capture_fields: List[CardList] = [CardList(), CardList()]
 
         center_field = self._move_cards_at_beginning(player, center_field)
 
         # sort card lists
         center_field.sort()
-        self.center_field = dict(
+        self.center_field: Dict[int, CardList] = dict(
             (month, center_field.of_month(month)) for month in range(1, 13)
         )
 
