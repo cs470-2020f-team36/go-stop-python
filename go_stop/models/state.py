@@ -1,4 +1,4 @@
-from typing import Any, List, Optional, Set, Tuple, cast
+from typing import List, Optional, Set, Tuple, Union, cast
 from typing_extensions import Literal
 
 from .card import Card
@@ -8,30 +8,16 @@ from .score_factor import ScoreFactor
 
 class State:
     def __init__(self, player: Literal[0, 1] = 0):
-        """
-        State of the game.
-        """
-
-        """
-        starting_player: Literal[0, 1]
-        Index of the starting player.
-        """
+        """Index of the starting player."""
         self.starting_player: Literal[0, 1] = player
 
-        """
-        player: Literal[0, 1]
-        Index of the current player.
-        """
+        """Index of the current player."""
         self.player: Literal[0, 1] = player
 
-        """
-        bomb_increment: int
-        Index of the bomb used to guarantee the uniqueness of `index`.
-        """
+        """Index of the bomb used to guarantee the uniqueness of `index`."""
         self.bomb_increment: int = 0
 
         """
-        go_histories: List[List[int]]
         Histories of points at Go's of players.
         For instance, [[8, 10, 32], [9]] means the player 0 claimed Go three times,
         and the player 1 did once, where the points are calculated after applying
@@ -41,49 +27,24 @@ class State:
         """
         self.go_histories: List[List[int]] = [[], []]
 
-        """
-        select_match: Optional[
+        """Save information of among which cards the player will select one."""
+        self.select_match: Union[
+            None,
             Tuple[
-                Card,
-                CardList,
+                Card,  # card thrown or card flipped
+                CardList,  # cards which are matched
                 Optional[
                     Tuple[
-                        Optional[Card],
-                        CardList,
-                        Card,
-                        CardList,
-                        int,
-                    ]
-                ]
-            ]
-        ]
-        Save information of among which cards the player will select one.
-        """
-        self.select_match: Optional[
-            Tuple[
-                Card,
-                CardList,
-                Optional[
-                    Tuple[
-                        Optional[Card],
-                        CardList,
-                        Card,
-                        CardList,
-                        int,
-                    ]
+                        CardList,  # list of cards which were captured before flip
+                        Card,  # card flipped
+                        CardList,  # captured bonus cards by flipping top card of drawing pile
+                        int,  # number of junk cards taken from opponent
+                    ],
                 ],
-            ]
+            ],
         ] = None
 
-        """
-        shaking: Optional[
-            Tuple[
-                Card,      # card to shake
-                CardList,  # collection of cards in a shaking (length >= 3)
-            ]
-        ]
-        Save information about which cards the player will shake with.
-        """
+        """Save information about which cards the player will shake with."""
         self.shaking: Optional[
             Tuple[
                 Card,  # card to shake
@@ -149,21 +110,21 @@ class State:
             "go_histories": self.go_histories,
             "select_match": None
             if self.select_match is None
-            else [
+            else (  # before flip
                 cast(Card, self.select_match[0]).serialize(),
-                cast(Card, self.select_match[1]).serialize(),
-                None
-                if self.select_match[2] is None
-                else [
-                    None
-                    if self.select_match[2][0] is None
-                    else self.select_match[2][0].serialize(),
+                cast(CardList, self.select_match[1]).serialize(),
+                None,
+            )
+            if self.select_match[2] is None
+            else (
+                cast(Card, self.select_match[0]).serialize(),
+                cast(CardList, self.select_match[1]).serialize(),
+                (
+                    self.select_match[2][0].serialize(),
                     self.select_match[2][1].serialize(),
-                    self.select_match[2][2].serialize(),
-                    self.select_match[2][3].serialize(),
-                    self.select_match[2][4],
-                ],
-            ],
+                    self.select_match[2][2],
+                ),
+            ),
             "shaking": None
             if self.shaking is None
             else [
@@ -212,13 +173,9 @@ class State:
                 None
                 if data["select_match"][2] is None
                 else (
-                    None
-                    if data["select_match"][2][0] is None
-                    else Card.deserialize(data["select_match"][2][0]),
+                    CardList.deserialize(data["select_match"][2][0]),
                     CardList.deserialize(data["select_match"][2][1]),
-                    Card.deserialize(data["select_match"][2][2]),
-                    CardList.deserialize(data["select_match"][2][3]),
-                    cast(int, data["select_match"][2][4]),
+                    cast(int, data["select_match"][2][2]),
                 ),
             )
         )

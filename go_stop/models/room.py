@@ -1,20 +1,19 @@
 import random
-import json
 from shortuuid import ShortUUID
 from .game import Game
 
 
 class Room:
     def __init__(self):
-        self.id = str(ShortUUID().random(length=4))
+        self.uid = str(ShortUUID().random(length=4))
         self.players = []
         self.game = None
 
-    def join(self, id: str):
-        self.players.append(id)
+    def join(self, client_id: str):
+        self.players.append(client_id)
 
-    def exit(self, id: str):
-        self.players.remove(id)
+    def exit(self, client_id: str):
+        self.players.remove(client_id)
         self.end_game()
 
     def start_game(self):
@@ -32,7 +31,7 @@ class Room:
 
     def serialize(self) -> dict:
         return {
-            "id": self.id,
+            "id": self.uid,
             "players": self.players,
-            "gameStarted": self.game != None,
+            "gameStarted": self.game is not None,
         }

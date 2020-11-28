@@ -1,4 +1,4 @@
-from typing import Callable, Any, List
+from typing import Callable, List
 from .card import Card
 
 

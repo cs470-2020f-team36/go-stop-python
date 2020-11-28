@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from typing import Any, List, Set
 from typing_extensions import Literal
 
-from .card import Card, SpecialCard
+from .card import Card
 from ..constants.card import go_stop_cards
 
 

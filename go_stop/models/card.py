@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-import calendar
 from typing import Any, Optional
 from typing_extensions import Literal
 
@@ -74,7 +73,6 @@ class Card(ABC):
             return "J{:02d}{}".format(self.month, self.index)
 
         if self.kind == "bonus":
-            assert isinstance(self, BonusCard)
             # pylint: disable=no-member
             return "+{}".format(self.multiple)
 
@@ -100,22 +98,15 @@ class Card(ABC):
 
         if serial[0] == "J":
             month = int(serial[1:3])
-            if month <= 10:
-                return JunkCard(month, index=int(serial[3]))
-            if month == 11:
-                index = int(serial[3])
-                multiple = 2 if index == 2 else 1
-                return JunkCard(11, index=index, multiple=multiple)
-            if month == 12:
-                return JunkCard(12, index=0, multiple=2)
+            index = 0 if month == 12 else int(serial[3])
+            multiple = 2 if (month == 11 and index == 2) or month == 12 else 1
+            return JunkCard(month, index, multiple)
 
         if serial[0] == "+":
             return BonusCard(int(serial[1:]))
 
-        if serial[0] == "*":
-            return SpecialCard("bomb", int(serial[1:]))
-
-        assert False
+        assert serial[0] == "*"
+        return SpecialCard("bomb", int(serial[1:]))
 
 
 class BrightCard(Card):
@@ -190,9 +181,7 @@ class JunkCard(Card):
 
 
 class BonusCard(Card):
-    def __init__(self, multiple: int):
-        assert multiple == 2 or multiple == 3
-
+    def __init__(self, multiple: Literal[2, 3]):
         self.multiple = multiple
         super().__init__("bonus", None, multiple - 2)
 
@@ -202,8 +191,7 @@ class BonusCard(Card):
 
 
 class SpecialCard(Card):
-    def __init__(self, kind: str, index: int):
-        assert kind in {"hidden", "bomb"}
+    def __init__(self, kind: Literal["bomb", "hidden"], index: int):
         super().__init__(kind, None, index)
 
     def __str__(self):

@@ -1,7 +1,7 @@
 import json
 
-from go_stop.models.action import ActionThrow
-from go_stop.models.card import BonusCard, BrightCard, JunkCard
+from go_stop.models.action import ActionThrow, ActionSelectMatch
+from go_stop.models.card import AnimalCard, BonusCard, BrightCard, JunkCard
 from go_stop.models.game import Game
 
 
@@ -16,6 +16,7 @@ def show_separator():
 f = open("./jsons/games/test.json")
 data = json.load(f)
 game = Game.deserialize(data)
+f.close()
 
 # print the serialized form of the game
 print(game.serialize())
@@ -77,6 +78,60 @@ game.play(ActionThrow(BrightCard(11)))
 show_separator()
 
 print(game.board.serialize())
+
+show_separator()
+show_separator()
+show_separator()
+
+# second game (test select match and ttadak)
+f = open("./jsons/games/test2.json")
+data = json.load(f)
+game = Game.deserialize(data)
+f.close()
+
+print(game.serialize())
+show_separator()
+show_actions()
+show_separator()
+
+# throw J091
+game.play(ActionThrow(JunkCard(9, 1)))
+
+# there are A09 and R09 on the center_field, so the player should decide whether one will be captured
+show_actions()
+show_separator()
+
+# choose to capture A09
+game.play(ActionSelectMatch(AnimalCard(9)))
+
+# the player flip +2 and J090, which is *ttadak*
+print(game.serialize()["logs"])
+show_separator()
+
+print(game.serialize())
+
+# third game (test stacking)
+f = open("./jsons/games/test3.json")
+data = json.load(f)
+game = Game.deserialize(data)
+f.close()
+
+print(game.serialize())
+show_separator()
+show_actions()
+show_separator()
+
+# throw J091
+game.play(ActionThrow(JunkCard(9, 1)))
+
+# there is A09 on the center_field (single match)
+# the player flip +2 and J090, which is *stacking*
+# so the center_field now has a stacking of J091, A09, +2, and J090
+print(game.serialize()["logs"])
+show_separator()
+
+print(game.serialize())
+
 
 # For more information, see models/ and constants/ directories.
 # Also, you may run the server with the file `server.py`.

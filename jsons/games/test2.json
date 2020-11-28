@@ -1,0 +1,130 @@
+{
+  "board": {
+    "hands": [
+      [
+        "J061",
+        "J010",
+        "J040",
+        "J041",
+        "J021",
+        "J080",
+        "J081",
+        "A12",
+        "J091",
+        "J031"
+      ],
+      [
+        "B01",
+        "R01",
+        "J010",
+        "A02",
+        "R02",
+        "J020",
+        "B11",
+        "R12",
+        "B12",
+        "+3"
+      ]
+    ],
+    "capture_fields": [
+      [],
+      []
+    ],
+    "center_field": {
+      "6": [
+        "J060"
+      ],
+      "7": [
+        "J070", "J071"
+      ],
+      "9": [
+        "A09", "R09"
+      ],
+      "11": [
+        "J110", "J111", "J112"
+      ]
+    },
+    "drawing_pile": [
+      "+2",
+      "J090",
+      "J120",
+      "A06",
+      "J030",
+      "R06",
+      "A05",
+      "J050",
+      "R05",
+      "J051",
+      "A04",
+      "R04",
+      "A10",
+      "R10",
+      "J100",
+      "J101",
+      "R03",
+      "B03",
+      "B08",
+      "A08",
+      "J071",
+      "R07"
+    ]
+  },
+  "state": {
+    "starting_player": 0,
+    "player": 0,
+    "bomb_increment": 0,
+    "go_histories": [
+      [],
+      []
+    ],
+    "select_match": null,
+    "shaking": null,
+    "shaking_histories": [
+      [],
+      []
+    ],
+    "stacking_histories": [
+      [],
+      []
+    ],
+    "score_factors": [
+      [
+        {
+          "kind": "bright",
+          "arg": 0
+        },
+        {
+          "kind": "animal",
+          "arg": 0
+        },
+        {
+          "kind": "ribbon",
+          "arg": 0
+        },
+        {
+          "kind": "junk",
+          "arg": 0
+        },
+        {
+          "kind": "go",
+          "arg": 0
+        }
+      ],
+      []
+    ],
+    "scores": [
+      0,
+      0
+    ],
+    "animal_9_moved": null,
+    "ended": false,
+    "winner": null
+  },
+  "flags": {
+    "go": false,
+    "select_match": false,
+    "shaking": false,
+    "move_animal_9": false,
+    "four_of_a_month": false
+  }
+}

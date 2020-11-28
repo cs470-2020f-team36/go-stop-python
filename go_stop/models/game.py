@@ -106,7 +106,7 @@ class Game(Setting):
 
         if flags.select_match:
             assert state.select_match is not None
-            _, matches, _ = cast(Tuple[Card, CardList, Any], state.select_match)
+            matches: CardList = state.select_match[1]
             return [ActionSelectMatch(match) for match in matches]
 
         if flags.shaking:
@@ -289,18 +289,19 @@ class Game(Setting):
             elif action.kind == "select match":
                 action = cast(ActionSelectMatch, action)
                 assert state.select_match is not None
-                card, matches, arg = cast(
+                card, matches, arg_after = cast(
                     Tuple[Card, CardList, Any], state.select_match
                 )
                 assert action.match in matches
 
-                if arg is None:
+                if arg_after is None:
                     # before flip
-                    assert card.month is not None
+                    card_thrown = card
+                    assert card_thrown.month is not None
 
-                    captures_before = CardList([card, action.match])
-                    self.logger.log("select match", (card, action.match))
-                    board.center_field[card.month].remove(action.match)
+                    captures_before = CardList([card_thrown, action.match])
+                    self.logger.log("select match", (card_thrown, action.match))
+                    board.center_field[card_thrown.month].remove(action.match)
 
                     state.select_match = None
                     flags.select_match = False
@@ -315,15 +316,14 @@ class Game(Setting):
                     if not continues:
                         return True
 
-                if arg is not None:
+                else:
                     # after flip
+                    flipped = card
                     (
-                        card,
                         captures_before,
-                        flipped,
                         bonus_captures,
                         junk_count,
-                    ) = arg
+                    ) = arg_after
                     captures_after = CardList([flipped, action.match])
                     self.logger.log("select match", (flipped, action.match))
 
@@ -349,6 +349,8 @@ class Game(Setting):
             junk_count += self._check_after_flip(
                 cast(ActionThrow, action).card
                 if action.kind == "throw"
+                else cast(ActionSelectMatch, action).match
+                if action.kind == "select match"
                 else None,
                 captures_before,
                 flipped,
@@ -691,11 +693,7 @@ class Game(Setting):
                 self.state.select_match[0],
                 self.state.select_match[1],
                 (
-                    cast(ActionThrow, action).card
-                    if action.kind == "throw"
-                    else None,
                     CardList(captures_before),
-                    flipped,
                     CardList(bonus_captures),
                     junk_count,
                 ),
