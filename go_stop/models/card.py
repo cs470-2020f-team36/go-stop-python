@@ -149,7 +149,7 @@ class RibbonCard(Card):
 
     def __str__(self):
         translation = {"blue": "청", "red": "홍", "plant": "초"}
-        return "{}월 단".format(self.month) + (
+        return "{}월 띠".format(self.month) + (
             " ({}단)".format(translation[self.ribbon_color])
             if self.ribbon_color != None
             else ""
