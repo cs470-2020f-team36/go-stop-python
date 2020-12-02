@@ -227,15 +227,7 @@ def on_play(msg):
                 == room.players.index(os.environ["AI_AGENT_ID"])
                 and not game.state.ended
             ):
-                result = game.serialize()
-                result.update(
-                    {
-                        "actions": [
-                            action.serialize() for action in game.actions()
-                        ],
-                        "players": room.players,
-                    }
-                )
+                result = room.serialize_game()
                 emit(
                     "spectate game response",
                     {
@@ -253,13 +245,7 @@ def on_play(msg):
         else:
             game.calculate_scores()
 
-        result = game.serialize()
-        result.update(
-            {
-                "actions": [action.serialize() for action in game.actions()],
-                "players": room.players,
-            }
-        )
+        result = room.serialize_game()
         emit(
             "play response",
             {
@@ -349,8 +335,8 @@ def on_end_game(msg):
 def on_spectate_game(msg):
     """When the client requested to spectate a game."""
     try:
-        res = rooms.find_by_room_id(msg["room"])
-        if res is None:
+        room = rooms.find_by_room_id(msg["room"])
+        if room is None:
             emit(
                 "spectate game response",
                 {
@@ -361,20 +347,12 @@ def on_spectate_game(msg):
             )
             return
 
-        if not res.game.state.ended:
-            res.game.calculate_scores(without_multiples=True)
+        if not room.game.state.ended:
+            room.game.calculate_scores(without_multiples=True)
         else:
-            res.game.calculate_scores()
+            room.game.calculate_scores()
 
-        result = res.game.serialize()
-        result.update(
-            {
-                "actions": [
-                    action.serialize() for action in res.game.actions()
-                ],
-                "players": res.players,
-            }
-        )
+        result = room.serialize_game()
 
         emit(
             "spectate game response",
@@ -382,7 +360,7 @@ def on_spectate_game(msg):
                 "success": True,
                 "result": result,
             }
-            if res.game is not None
+            if room.game is not None
             else {
                 "success": False,
                 "error": "The game has not been started in the room.",

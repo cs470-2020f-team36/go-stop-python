@@ -6,11 +6,12 @@ A class for a room for the clients to play a Go-Stop game.
 
 import os
 import random
+from typing import Optional
 
 from shortuuid import ShortUUID
 
 from ..models.game import Game
-from ..service.ai import ai
+from ..service.ai import ai, estimate
 
 
 class Room:
@@ -76,3 +77,27 @@ class Room:
             "gameStarted": self.game is not None,
             "singlePlayer": self.single_player,
         }
+
+    def serialize_game(self) -> Optional[dict]:
+        """Serialize game if the game is presented in this room."""
+        if self.game is None:
+            return None
+
+        result = self.game.serialize()
+        result.update(
+            {
+                "actions": [
+                    action.serialize() for action in self.game.actions()
+                ],
+                "players": self.players,
+            }
+        )
+
+        if self.single_player:
+            ai_index = self.players.index(os.environ["AI_AGENT_ID"])
+            estimated_result = estimate(self.game, ai_index)
+            result.update({"estimate": list(estimated_result)})
+        else:
+            result.update({"estimate": None})
+
+        return result
