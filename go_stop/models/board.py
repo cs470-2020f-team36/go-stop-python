@@ -36,18 +36,18 @@ class Board(Setting):
             # temporary center field
             temp_center_field: CardList = self.drawing_pile[20:28]
 
+            # remaining drawing pile
+            self.drawing_pile = self.drawing_pile[28:]
+
+            # capture fields
+            self.capture_fields: List[CardList] = [CardList(), CardList()]
+
+            temp_center_field = self._move_cards_at_beginning(
+                starting_player, temp_center_field
+            )
+
             if not self._is_reset_necessary(temp_center_field):
                 break
-
-        # remaining drawing pile
-        self.drawing_pile = self.drawing_pile[28:]
-
-        # capture fields
-        self.capture_fields: List[CardList] = [CardList(), CardList()]
-
-        temp_center_field = self._move_cards_at_beginning(
-            starting_player, temp_center_field
-        )
 
         # sort card lists
         temp_center_field.sort()
