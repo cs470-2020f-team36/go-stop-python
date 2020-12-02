@@ -103,7 +103,7 @@ class Room:
             set_estimate
             and self.single_player
             and not self.game.state.ended
-            and self.game.players.index(os.environ["AI_AGENT_ID"])
+            and self.players.index(os.environ["AI_AGENT_ID"])
             == self.game.state.player
         ):
             ai_index = self.players.index(os.environ["AI_AGENT_ID"])
