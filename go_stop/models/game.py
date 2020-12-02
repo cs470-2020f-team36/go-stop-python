@@ -310,9 +310,6 @@ class Game(Setting):
                     self.logger.log("select match", (flipped, action.match))
 
                     assert flipped.month is not None
-                    print(
-                        flipped, action.match, board.center_field[flipped.month]
-                    )
                     board.center_field[flipped.month].remove(action.match)
 
                     state.select_match = None

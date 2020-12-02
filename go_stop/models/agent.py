@@ -52,7 +52,6 @@ class Agent(ABC):
                 return action
 
             policy, _ = estimation
-            print([(str(all_actions[i]), p) for i, p in enumerate(policy) if p != 0])
             action = choice(all_actions, size=1, p=policy)[0]
 
             return action
