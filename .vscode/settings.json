@@ -1,6 +1,8 @@
 {
   "python.linting.pylintArgs": [
     "--generated-members=numpy.*, torch.*",
-    "--include-naming-hint=y"
-  ]
+    "--include-naming-hint=y",
+    "--enable=W0614"
+  ],
+  "editor.tabSize": 4
 }
