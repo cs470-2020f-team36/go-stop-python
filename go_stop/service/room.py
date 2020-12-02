@@ -107,7 +107,7 @@ class Room:
             and ai_index == self.game.state.player
         ):
             policy, value = ai.estimate(self.game)
-            result.update({"estimate": [list(policy), value]})
+            result.update({"estimate": [[p.astype(float) for p in policy], value]})
         else:
             result.update({"estimate": None})
 
