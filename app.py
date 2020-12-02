@@ -43,7 +43,6 @@ def on_connect():
 @socketio.on("list rooms")
 def on_list_rooms(_):
     """When the client requested the list of presented rooms."""
-    print(rooms.serialize())
     emit(
         "list rooms response",
         {
