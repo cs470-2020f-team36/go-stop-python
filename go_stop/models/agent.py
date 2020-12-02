@@ -47,7 +47,7 @@ class Agent(ABC):
             net.eval()
             with torch.no_grad():
                 encoded_game = (
-                    torch.from_numpy(encode_game(game, game.state.player))
+                    encode_game(game, game.state.player)
                     .unsqueeze(0)
                     .float()
                 )
