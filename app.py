@@ -227,8 +227,19 @@ def on_play(msg):
                 == room.players.index(os.environ["AI_AGENT_ID"])
                 and not game.state.ended
             ):
+                result = room.serialize_game()
+                emit(
+                    "spectate game response",
+                    {
+                        "success": True,
+                        "result": result,
+                    },
+                    broadcast=True,
+                )
+
                 action = ai.query(game)
                 game.play(action)
+                time.sleep(2)
 
                 result = room.serialize_game()
                 emit(
@@ -239,14 +250,13 @@ def on_play(msg):
                     },
                     broadcast=True,
                 )
-                time.sleep(2)
 
         if not game.state.ended:
             game.calculate_scores(without_multiples=True)
         else:
             game.calculate_scores()
 
-        result = room.serialize_game()
+        result = room.serialize_game(set_estimate=False)
         emit(
             "play response",
             {
@@ -353,7 +363,7 @@ def on_spectate_game(msg):
         else:
             room.game.calculate_scores()
 
-        result = room.serialize_game()
+        result = room.serialize_game(set_estimate=False)
 
         emit(
             "spectate game response",
