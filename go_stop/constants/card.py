@@ -1,8 +1,13 @@
+"""
+card.py
+
+Exports some lists of cards.
+"""
+
 from ..models.card import (
     AnimalCard,
     BonusCard,
     BrightCard,
-    Card,
     JunkCard,
     RibbonCard,
 )

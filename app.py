@@ -1,53 +1,36 @@
-from flask_ngrok import _run_ngrok
+"""
+app.py
+
+The server instance implemented on flask_socketio.
+"""
+
+
+import os
+import time
+
 from flask import Flask, request
-from jinja2 import Template
-from threading import Timer
-import inspect
 from flask_socketio import SocketIO, emit
-from go_stop.models.room_list import RoomList
+
 from go_stop.models.action import Action
+from go_stop.service.ai import ai
+from go_stop.service.room_list import RoomList
 
 
 rooms: RoomList = RoomList()
 
 
-def start_ngrok():
-    ngrok_address = _run_ngrok()
-    print(ngrok_address)
-
-
-def run_with_ngrok(app):
-    old_run = app.run
-
-    def new_run(*args, **kwargs):
-        thread = Timer(1, start_ngrok)
-        thread.setDaemon(True)
-        thread.start()
-        old_run(*args, **kwargs)
-
-    app.run = new_run
-
-
 app = Flask(__name__)
-app.config["SECRET_KEY"] = "" # secret key
+app.config["SECRET_KEY"] = os.environ["APP_SECRET_KEY"]
 
-# run_with_ngrok(app)
 socketio = SocketIO(
     app,
-    cors_allowed_origins=[
-        # allowed origins
-    ],
+    cors_allowed_origins="*",
 )
-
-
-@app.route("/")
-def home():
-    template = Template("The server is up.")
-    return template.render()
 
 
 @socketio.on("connect")
 def on_connect():
+    """On connect."""
     emit(
         "connect response",
         {
@@ -58,7 +41,8 @@ def on_connect():
 
 
 @socketio.on("list rooms")
-def on_list_rooms(msg):
+def on_list_rooms(_):
+    """When the client requested the list of presented rooms."""
     print(rooms.serialize())
     emit(
         "list rooms response",
@@ -71,6 +55,7 @@ def on_list_rooms(msg):
 
 @socketio.on("my room")
 def on_my_room(msg):
+    """When the client requested its room."""
     try:
         if not isinstance(msg["client"], str) or msg["client"] == "":
             emit(
@@ -106,6 +91,7 @@ def on_my_room(msg):
 
 @socketio.on("make room")
 def on_make_room(msg):
+    """When the client requested to make a room."""
     try:
         res = rooms.make(msg["client"])
 
@@ -134,6 +120,7 @@ def on_make_room(msg):
 
 @socketio.on("join room")
 def on_join_room(msg):
+    """When the client requested to join a room."""
     try:
         res = rooms.join(msg["client"], msg["room"])
 
@@ -162,6 +149,7 @@ def on_join_room(msg):
 
 @socketio.on("exit room")
 def on_exit_room(msg):
+    """When the client requested to exit its room."""
     try:
         res = rooms.exit(msg["client"])
 
@@ -190,6 +178,7 @@ def on_exit_room(msg):
 
 @socketio.on("play")
 def on_play(msg):
+    """When the client requested to play an action."""
     try:
         player = msg["client"]
         action = Action.deserialize(msg["action"])
@@ -233,10 +222,37 @@ def on_play(msg):
             )
             return
 
+        if room.single_player:
+            while (
+                game.state.player
+                == room.players.index(os.environ["AI_AGENT_ID"])
+                and not game.state.ended
+            ):
+                result = game.serialize()
+                result.update(
+                    {
+                        "actions": [
+                            action.serialize() for action in game.actions()
+                        ],
+                        "players": room.players,
+                    }
+                )
+                emit(
+                    "spectate game response",
+                    {
+                        "success": True,
+                        "result": result,
+                    },
+                    broadcast=True,
+                )
+                time.sleep(1)
+                action = ai.query(game)
+                game.play(action)
+
         if not game.state.ended:
-            game._calculate_scores(without_multiples=True)
+            game.calculate_scores(without_multiples=True)
         else:
-            game._calculate_scores()
+            game.calculate_scores()
 
         result = game.serialize()
         result.update(
@@ -274,6 +290,7 @@ def on_play(msg):
 
 @socketio.on("start game")
 def on_start_game(msg):
+    """When the client requested to start a game in its room."""
     try:
         res = rooms.start_game(msg["client"])
 
@@ -302,6 +319,7 @@ def on_start_game(msg):
 
 @socketio.on("end game")
 def on_end_game(msg):
+    """When the client requested to end the game in its room."""
     try:
         res = rooms.end_game(msg["client"])
 
@@ -330,6 +348,7 @@ def on_end_game(msg):
 
 @socketio.on("spectate game")
 def on_spectate_game(msg):
+    """When the client requested to spectate a game."""
     try:
         res = rooms.find_by_room_id(msg["room"])
         if res is None:
@@ -341,11 +360,12 @@ def on_spectate_game(msg):
                     "errorCode": 2,
                 },
             )
+            return
 
         if not res.game.state.ended:
-            res.game._calculate_scores(without_multiples=True)
+            res.game.calculate_scores(without_multiples=True)
         else:
-            res.game._calculate_scores()
+            res.game.calculate_scores()
 
         result = res.game.serialize()
         result.update(
@@ -363,7 +383,7 @@ def on_spectate_game(msg):
                 "success": True,
                 "result": result,
             }
-            if res != None and res.game != None
+            if res.game is not None
             else {
                 "success": False,
                 "error": "The game has not been started in the room.",
@@ -382,4 +402,5 @@ def on_spectate_game(msg):
         )
 
 
-app.run(host="") # host
+if __name__ == "__main__":
+    app.run()  # host

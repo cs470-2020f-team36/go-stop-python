@@ -18,7 +18,7 @@ from ..utils.list import flatten
 
 Type = TypeVar("Type")
 
-"""add `bomb card` and `hidden card` to go_stop_cards"""
+# add `bomb card` and `hidden card` to go_stop_cards
 extended_go_stop_cards = CardList(
     go_stop_cards + [SpecialCard("bomb")] + [SpecialCard("hidden")]
 )

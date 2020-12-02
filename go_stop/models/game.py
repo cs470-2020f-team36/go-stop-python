@@ -190,7 +190,7 @@ class Game(Setting):
                     # append the flipped card to the hand
                     flipped = self._flip_card()
                     self._append_to_hand(CardList([flipped]))
-                    self._calculate_scores(without_multiples=True)
+                    self.calculate_scores(without_multiples=True)
 
                     return True
 
@@ -343,7 +343,7 @@ class Game(Setting):
             self._take_junk_from_opponent(junk_count)
 
             # calculate the score factors
-            self._calculate_scores(without_multiples=True)
+            self.calculate_scores(without_multiples=True)
 
             # check move_animal_9
             if (
@@ -352,11 +352,11 @@ class Game(Setting):
             ):
                 # first, check the score of the player
                 state.animal_9_moved = True
-                self._calculate_scores(without_multiples=True)
+                self.calculate_scores(without_multiples=True)
                 score_after_animal_9 = state.scores[state.player]
 
                 state.animal_9_moved = None
-                self._calculate_scores(without_multiples=True)
+                self.calculate_scores(without_multiples=True)
 
                 if score_after_animal_9 >= 7:
                     flags.move_animal_9 = True
@@ -470,7 +470,7 @@ class Game(Setting):
             state.animal_9_moved = action.option
             flags.move_animal_9 = False
             self.logger.log("move animal 9", action.option)
-            self._calculate_scores(without_multiples=True)
+            self.calculate_scores(without_multiples=True)
 
             # check go
             if (
@@ -822,7 +822,7 @@ class Game(Setting):
             self.board.capture_fields[state.player].append(junk)
             self.logger.log("take junk from opponent", junk)
 
-    def _calculate_scores(self, without_multiples: bool = False):
+    def calculate_scores(self, without_multiples: bool = False):
         kinds = [f.kind for f in self.state.score_factors[self.state.player]]
         if "four of a month" in kinds or "three stackings" in kinds:
             self.state.scores = [
@@ -985,7 +985,7 @@ class Game(Setting):
         state = self.state
 
         state.go_histories[state.player].append(0)
-        self._calculate_scores(without_multiples=True)
+        self.calculate_scores(without_multiples=True)
         state.go_histories[state.player][-1] = self.state.scores[state.player]
 
         state.player = cast(Player, 1 - state.player)
@@ -999,7 +999,7 @@ class Game(Setting):
         state.ended = True
         state.winner = state.player
 
-        self._calculate_scores()
+        self.calculate_scores()
         score_before_moving_animal_9 = state.scores[state.player]
 
         # move animal 9 if it is not queried for the opponent
@@ -1009,7 +1009,7 @@ class Game(Setting):
         ):
             state.animal_9_moved = True
 
-            self._calculate_scores()
+            self.calculate_scores()
             score_after_moving_animal_9 = state.scores[state.player]
 
             # when it gets worse by moving animal 9, roll it back
@@ -1019,7 +1019,7 @@ class Game(Setting):
             else:
                 self.logger.log("move animal 9")
 
-            self._calculate_scores()
+            self.calculate_scores()
 
         self.logger.log("go", False)
 

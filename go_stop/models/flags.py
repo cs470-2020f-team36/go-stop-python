@@ -1,5 +1,15 @@
+"""
+flags.py
+
+Define some flags used in Go-Stop.
+"""
+
+
 class Flags:
+    """Flags class."""
+
     def __init__(self):
+        # pylint: disable=invalid-name
         self.go = False
         self.select_match = False
         self.shaking = False

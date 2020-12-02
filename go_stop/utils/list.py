@@ -2,7 +2,6 @@
 Utility functions related to lists.
 """
 
-
 from typing import Iterable
 
 from go_stop.models.card_list import CardList

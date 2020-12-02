@@ -19,6 +19,7 @@ class MLPBlock(nn.Module):
     consisting of a fully connected layer,
     a batch normalization, and an activation function ReLU.
     """
+
     def __init__(self, in_channels: int, out_channels: int):
         super().__init__()
         self.fc = nn.Linear(in_channels, out_channels)
@@ -41,6 +42,7 @@ class OutBlock(nn.Module):
     For the policy: it is a composition of two MLP layers and a softmax function.
     For the value: it is a composition of an MLP layer, and a summation of MLP and tanh(MLP).
     """
+
     def __init__(self, in_channels: int):
         super().__init__()
 

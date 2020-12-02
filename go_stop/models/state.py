@@ -12,6 +12,9 @@ from .player import Player
 from .score_factor import ScoreFactor
 
 
+# pylint: disable=too-many-instance-attributes
+
+
 class State:
     """State class."""
 
