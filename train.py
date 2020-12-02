@@ -9,7 +9,6 @@ which is difficult to accelerate using GPU.
 
 import json
 import math
-from pathlib import Path
 import random
 from typing import Dict, List, Optional, Tuple
 
@@ -56,6 +55,7 @@ def reward_wrt_player(game: Game, player: int, reward_func=reward):
     return reward_func(point)
 
 
+# `P` is a dict used to store the prior probability of nodes.
 # A dict with observable states as keys and policies as values
 # Dict[tuple of length args.ninp, Tensor of shape (args.nout,)]
 P: Dict[Tuple[int, ...], Tensor] = {}
@@ -93,13 +93,11 @@ class UCTNode:
 
     def encoded_game(self) -> tuple:
         """Return the encoded game w.r.t. the current player."""
-
         encoded_game = encode_game(self.game, self.game.state.player)
         return tuple(encoded_game)
 
     def p(self, action: Action) -> float:
         """Return the prior probability distribution stored in `P`."""
-
         encoded_game = self.encoded_game()
         assert encoded_game in P
         return P[encoded_game][get_action_index(action)]
@@ -127,7 +125,6 @@ class UCTNode:
             (1 - \epsilon) \pi(\bullet \mid s; \tau) + \epsilon E,
             E \sim Dirichlet(\alpha, \dots, \alpha)
         """
-
         policy = self.policy(tau)
         dirichlet_noise = torch.from_numpy(
             np.random.dirichlet(
@@ -153,25 +150,20 @@ class UCTNode:
         """Return Q(s, a)."""
         if get_action_index(action) in self._q:
             return self._q[get_action_index(action)]
-
         return 0
 
     def set_q(self, action: Action, q_value: float):
         """Set Q(s, a)."""
-
         self._q[get_action_index(action)] = q_value
 
     def n(self, action: Action) -> int:
         """Return N(s, a)."""
-
         if get_action_index(action) in self._n:
             return self._n[get_action_index(action)]
-
         return 0
 
     def set_n(self, action: Action, n_value: int):
         """Set N(s, a)."""
-
         self._n[get_action_index(action)] = n_value
 
     def u(self, action: Action) -> float:
@@ -179,7 +171,6 @@ class UCTNode:
         Return U(s, a), which is defined by
         U(s, a) = Q(s, a) + c_{puct} ⋅ P(s, a) ⋅ \frac{\sqrt{\sum_n N(s, b)}}{1 + N(s, a)}.
         """
-
         r = self.q(action) + args.c_puct * self.p(action) * math.sqrt(
             sum(self._n.values())
         ) / (1 + self.n(action))
@@ -304,25 +295,36 @@ def execute_episode(net: EncoderNet) -> Tensor:
     until the game of the root node is terminated.
     """
 
-    data = torch.zeros((0, DIM_ENCODED_GAME + NUM_ACTIONS + 1))
+    training_data = torch.zeros((0, DIM_ENCODED_GAME + NUM_ACTIONS + 1))
     root_node = create_root_node(Game(), net)
 
     turn_count = 0
     while True:
+        # Take a sample of size `args.similar_games(turn_count)`
+        # consisting of games with the same observable information.
         similar_games = sample_from_observation(
             root_node.game,
             root_node.game.state.player,
             sample_size=args.similar_games(turn_count),
         )
+
+        # Create the corresponding nodes.
+        # In this case, we do not need to append the game state to `P`
+        # since the observed information will be the same with `root_node.game`.
         similar_nodes = [root_node] + [
             create_root_node(game, net) for game in similar_games
         ]
 
-        avg = torch.zeros((0, DIM_ENCODED_GAME + NUM_ACTIONS + 1))
+        # We will take the average over the priors and the expected values
+        # of those sibling games.
+        average = torch.zeros((0, DIM_ENCODED_GAME + NUM_ACTIONS + 1))
+
         for node in similar_nodes:
+            # Do the MCTS simulation with the neural network
             for _ in range(args.mcts_search_per_simul):
                 search(node, net)
 
+            # Generate a training datum
             tau = (
                 1 if turn_count < args.tau_threshold else args.infinitesimal_tau
             )
@@ -334,28 +336,37 @@ def execute_episode(net: EncoderNet) -> Tensor:
                 )
             ).unsqueeze(0)
 
+            # It should not contain any NaN, which will cause a failure of training process.
             if training_datum.isnan().any():
                 raise Exception("training_datum contains an NaN")
 
-            avg = torch.cat((avg, training_datum))
+            # Append the training datum
+            average = torch.cat((average, training_datum))
 
-        avg = avg.mean(axis=0).unsqueeze(0)
-        data = torch.cat((data, avg))
+        # Average out all the training data gathered
+        average = average.mean(axis=0).unsqueeze(0)
+
+        # And append to the final data
+        training_data = torch.cat((training_data, average))
+
+        # Increase the `turn_count`
         turn_count += 1
 
+        # Choose the best action
         action_index = np.random.choice(
             NUM_ACTIONS, p=list(root_node.policy_with_noise())
         )
+        # The following will ensure that `action_index` have been visited at least once
         while action_index not in root_node.children:
             search(root_node, net, all_actions[action_index])
 
-        if action_index in root_node.children:
-            root_node = root_node.children[action_index]
-            if root_node.game.state.ended:
-                return data
+        # Take the best action we chose
+        root_node = root_node.children[action_index]
+        if root_node.game.state.ended:
+            # If the game of the root node terminated, return the training data
+            return training_data
 
 
-# returns (net: EncoderNet, is_evolved: bool)
 def evolve(net) -> Tuple[EncoderNet, bool]:
     """
     Make the neural network evolve
@@ -365,30 +376,39 @@ def evolve(net) -> Tuple[EncoderNet, bool]:
     prev_net = copy.deepcopy(net)
     net.train()
 
+    # Define the SGD optimizer
     optimizer = optim.SGD(net.parameters(), lr=args.learning_rate, momentum=0.9)
 
     for episode_count in tqdm.tqdm(
         range(args.num_episodes_per_evolvution), desc="episodes"
     ):
+        # Gather the training data
         examples = execute_episode(net)
+
+        # Permute it randomly
         examples = examples[torch.randperm(examples.size(0))]
 
-        splitted = torch.split(examples, args.batch_size)
+        # Split it into minibatches
+        minibatches = torch.split(examples, args.batch_size)
         total_loss = 0
-        for data in splitted:
-            if data.size(0) == 1:
+        for batch in minibatches:
+            # If the batch size is (unfortunately) 1, ignore it.
+            if batch.size(0) == 1:
                 break
 
-            # (B, args.ninp)
-            states = data[:, :DIM_ENCODED_GAME]
+            # Tensor of shape (B, args.ninp)
+            states = batch[:, :DIM_ENCODED_GAME]
 
-            # tuple of (B, args.nout) and (B,)
+            # Target data from the MCTS.
+            # Tuple of tensors of shape (B, args.nout) and shape (B,), resp.
             y_target = (
-                data[:, DIM_ENCODED_GAME:-1],
-                data[:, -1:].squeeze(),
+                batch[:, DIM_ENCODED_GAME:-1],
+                batch[:, -1:].squeeze(),
             )
+            # Predicted data from the NN.
             y_pred = net(states)
 
+            # Do the backpropagation.
             criterion = AlphaLoss()
             loss = criterion(y_pred, y_target)
             total_loss += loss.item()
@@ -402,6 +422,7 @@ def evolve(net) -> Tuple[EncoderNet, bool]:
 
         tqdm.tqdm.write(f"Loss (episode {episode_count}): {total_loss}")
 
+    # Match the trained network with the previous one.
     prev_agent = Agent.from_net(prev_net)
     agent = Agent.from_net(net)
     points = match_agents(agent, prev_agent)
@@ -411,10 +432,6 @@ def evolve(net) -> Tuple[EncoderNet, bool]:
 
     print("The previous network won the new one.")
     return (prev_net, False)
-
-
-# the following do a simple one-tailed hypothesis test
-# with a normal distribution and the size of the test alpha = args.test_alpha
 
 
 # random first player
@@ -457,15 +474,18 @@ def is_first_better(points: List[float]) -> bool:
 def main():
     """Main training process."""
 
+    # pylint: disable=global-statement
+    global P
+
     net = EncoderNet()
 
-    # load state dict if exists
-    ckpt_path = Path("data/best.pt")
+    # Load state dict if exists
+    ckpt_path = args.root_dir / "best.pt"
     if ckpt_path.is_file():
         net.load_state_dict(torch.load(ckpt_path))
 
-    # load env
-    env_path = Path("data/env.json")
+    # Load env
+    env_path = args.root_dir / "env.json"
     if env_path.is_file():
         with open(env_path, "r") as env_file:
             env = json.load(env_file)
@@ -478,19 +498,28 @@ def main():
         range(args.max_evolution), desc="evolution"
     ):
         if evolution_count >= env["version"]:
+            # Initialize `P`
+            P = {}
+
+            # Control the learning rate
             if evolution_count >= 10:
                 args.learning_rate *= args.lr_decrease_rate
 
-            tqdm.tqdm.write(f"[evolution {evolution_count}]")
+            tqdm.tqdm.write(f"[Evolution {evolution_count}]")
 
+            # Update the network
             net, is_evolved = evolve(net)
+
+            # If it is worse than the previous one, do nothing and try the evolution again.
             if not is_evolved:
                 continue
 
+            # Store the state dict of the best network.
             torch.save(net.state_dict(), ckpt_path)
 
             env["version"] += 1
 
+            # Record the match with a random agent.
             points = match_agents(Agent.from_net(net), Agent.random())
             tqdm.tqdm.write(
                 f"non-defeat rate: {len([x for x in points if x >= 0]) / len(points)},",
