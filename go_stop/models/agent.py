@@ -52,7 +52,8 @@ class Agent(ABC):
                 return action
 
             policy, _ = estimation
-            action = choice(all_actions, size=1, p=policy)[0]
+            action = choice(all_actions, size=1, p=policy)
+            print(action)
 
             return action
 
