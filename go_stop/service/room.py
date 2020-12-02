@@ -99,7 +99,13 @@ class Room:
             }
         )
 
-        if set_estimate and self.single_player and not self.game.state.ended:
+        if (
+            set_estimate
+            and self.single_player
+            and not self.game.state.ended
+            and self.game.players.index(os.environ["AI_AGENT_ID"])
+            == self.game.state.player
+        ):
             ai_index = self.players.index(os.environ["AI_AGENT_ID"])
             estimated_result = estimate(self.game, ai_index)
             result.update({"estimate": list(estimated_result)})
