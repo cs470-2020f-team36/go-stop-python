@@ -39,7 +39,7 @@ from .setting import Setting
 from .state import State
 
 
-# pylint: disable=too-many-lines
+# pylint: disable=too-many-lines, too-many-arguments
 
 
 class Game(Setting):
@@ -329,7 +329,9 @@ class Game(Setting):
             captures_after = cast(CardList, captures_after)
 
             junk_count += self._check_after_flip(
-                card_thrown if action.kind in {"throw", "select match"} else None,
+                card_thrown
+                if action.kind in {"throw", "select match"}
+                else None,
                 captures_before,
                 flipped,
                 bonus_captures,
@@ -457,12 +459,10 @@ class Game(Setting):
             if action.option:
                 # go
                 self._go()
-                return True
-
             else:
                 # stop
                 self._stop()
-                return True
+            return True
 
         if action.kind == "move animal 9":
             action = cast(ActionMoveAnimal9, action)
@@ -482,12 +482,12 @@ class Game(Setting):
                 > state.go_histories[state.player][-1]
             ):
                 if board.hands[state.player] == []:
+                    # automatic stop
                     self._stop()
                     return True
 
-                else:
-                    flags.go = True
-                    return True
+                flags.go = True
+                return True
 
             # pass the turn
             self.logger.log(
@@ -692,8 +692,6 @@ class Game(Setting):
         bonus_captures: CardList,
         captures_after: CardList,
     ) -> int:
-        print(card, captures_before, flipped, bonus_captures, captures_after)
-
         board = self.board
         state = self.state
 

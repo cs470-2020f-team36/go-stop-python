@@ -7,7 +7,9 @@ AI agent.
 from typing import List, Tuple
 
 import torch
+from torch import Tensor
 
+from ..models.action import NUM_ACTIONS, all_actions
 from ..models.agent import Agent
 from ..models.game import Game
 from ..models.player import Player
@@ -31,5 +33,16 @@ def estimate(game: Game, player: Player) -> Tuple[List[float], float]:
     net.eval()
     with torch.no_grad():
         policy, value = net(encoded_game.unsqueeze(0))
+        mask = (
+            Tensor(
+                [
+                    1 if all_actions[i] in game.actions() else 0
+                    for i in range(NUM_ACTIONS)
+                ],
+            )
+            == 0
+        )
+        policy = policy.masked_fill(mask, 0)
+        policy = policy / torch.sum(policy)
 
         return policy.squeeze().tolist(), value.squeeze().item()
