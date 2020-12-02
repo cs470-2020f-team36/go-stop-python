@@ -45,6 +45,21 @@ class Agent(ABC):
             return random.choice(game.actions())
 
         if self.kind == "net":
+            estimation = self.estimate(game)
+
+            if estimation is None:
+                action = random.choice(game.actions())
+                return action
+
+            policy, _ = estimation
+            action = choice(all_actions, size=1, p=policy)[0]
+
+            return action
+
+    def estimate(self, game: Game):
+        """Query an action to the agent with given game"""
+
+        if self.kind == "net":
             net = self.net
             net.eval()
             with torch.no_grad():
@@ -62,25 +77,20 @@ class Agent(ABC):
                 )
 
                 try:
+                    policy, value = net(encoded_game)
                     action_index = (
-                        net(encoded_game)[0].squeeze().masked_fill(mask, 0)
+                        policy[0].squeeze().masked_fill(mask, 0)
                     ) ** (1 / args.infinitesimal_tau)
                     action_index = action_index / action_index.sum()
                     action_index = action_index.numpy()
-                    action_index = choice(
-                        range(NUM_ACTIONS), 1, p=action_index
-                    )[0]
 
-                    print(action_index)
-
-                    action = all_actions[action_index]
-                    if action not in game.actions():
-                        action = random.choice(game.actions())
+                    value = value.squeeze().item()
+                    return policy, value
 
                 except:
-                    action = random.choice(game.actions())
+                    return None
 
-                return action
+        return None
 
     @staticmethod
     def test():

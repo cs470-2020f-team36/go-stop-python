@@ -11,7 +11,7 @@ from typing import Optional
 from shortuuid import ShortUUID
 
 from ..models.game import Game
-from ..service.ai import ai, estimate
+from ..service.ai import ai
 
 
 class Room:
@@ -99,16 +99,15 @@ class Room:
             }
         )
 
+        ai_index = self.players.index(os.environ["AI_AGENT_ID"])
         if (
             set_estimate
             and self.single_player
             and not self.game.state.ended
-            and self.players.index(os.environ["AI_AGENT_ID"])
-            == self.game.state.player
+            and ai_index == self.game.state.player
         ):
-            ai_index = self.players.index(os.environ["AI_AGENT_ID"])
-            estimated_result = estimate(self.game, ai_index)
-            result.update({"estimate": list(estimated_result)})
+            policy, value = ai.estimate(self.game)
+            result.update({"estimate": [list(policy), value]})
         else:
             result.update({"estimate": None})
 
