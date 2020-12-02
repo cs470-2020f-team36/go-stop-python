@@ -99,7 +99,7 @@ class Room:
             }
         )
 
-        if self.single_player:
+        if self.single_player and not self.game.state.ended:
             ai_index = self.players.index(os.environ["AI_AGENT_ID"])
             estimated_result = estimate(self.game, ai_index)
             result.update({"estimate": list(estimated_result)})
