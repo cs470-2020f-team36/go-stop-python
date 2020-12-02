@@ -42,7 +42,7 @@ class State:
         self.select_match: Union[
             None,
             Tuple[
-                Card,  # card thrown or card flipped
+                Card,  # card thrown
                 CardList,  # cards which are matched
                 Optional[
                     Tuple[
@@ -122,18 +122,23 @@ class State:
             "select_match": None
             if self.select_match is None
             else (  # before flip
-                cast(Card, self.select_match[0]).serialize(),
+                None
+                if self.select_match[0] is None
+                else cast(Card, self.select_match[0]).serialize(),
                 cast(CardList, self.select_match[1]).serialize(),
                 None,
             )
             if self.select_match[2] is None
             else (
-                cast(Card, self.select_match[0]).serialize(),
+                None
+                if self.select_match[0] is None
+                else cast(Card, self.select_match[0]).serialize(),
                 cast(CardList, self.select_match[1]).serialize(),
                 (
                     self.select_match[2][0].serialize(),
                     self.select_match[2][1].serialize(),
-                    self.select_match[2][2],
+                    self.select_match[2][2].serialize(),
+                    self.select_match[2][3],
                 ),
             ),
             "shaking": None
@@ -185,8 +190,9 @@ class State:
                 if data["select_match"][2] is None
                 else (
                     CardList.deserialize(data["select_match"][2][0]),
-                    CardList.deserialize(data["select_match"][2][1]),
-                    cast(int, data["select_match"][2][2]),
+                    Card.deserialize(data["select_match"][2][1]),
+                    CardList.deserialize(data["select_match"][2][2]),
+                    cast(int, data["select_match"][2][3]),
                 ),
             )
         )

@@ -4,6 +4,7 @@ game.py
 Implement the main Go-Stop game class.
 """
 
+import copy
 from itertools import groupby
 from typing import Any, List, Optional, Tuple, cast
 
@@ -196,7 +197,7 @@ class Game(Setting):
 
                 # elsewise, throw a card (or a bomb)
                 (captures_before, junk_count_before) = self._throw_card(
-                    action.card
+                    action.card, action.card
                 )
 
                 # if it signals to terminate `self.play`, terminate it.
@@ -210,7 +211,7 @@ class Game(Setting):
                     captures_after,
                     junk_count,
                 ) = self._flip_and_throw_after(
-                    captures_before, junk_count_before
+                    action.card, captures_before, junk_count_before
                 )
                 if not continues:
                     return True
@@ -261,7 +262,7 @@ class Game(Setting):
                     captures_after,
                     junk_count,
                 ) = self._flip_and_throw_after(
-                    captures_before, junk_count_before
+                    None, captures_before, junk_count_before
                 )
                 if not continues:
                     return True
@@ -269,14 +270,13 @@ class Game(Setting):
             elif action.kind == "select match":
                 action = cast(ActionSelectMatch, action)
                 assert state.select_match is not None
-                card, matches, arg_after = cast(
+                card_thrown, matches, arg_after = cast(
                     Tuple[Card, CardList, Any], state.select_match
                 )
                 assert action.match in matches
 
                 if arg_after is None:
                     # before flip
-                    card_thrown = card
                     assert card_thrown.month is not None
 
                     captures_before = CardList([card_thrown, action.match])
@@ -292,15 +292,17 @@ class Game(Setting):
                         bonus_captures,
                         captures_after,
                         junk_count,
-                    ) = self._flip_and_throw_after(captures_before, 0)
+                    ) = self._flip_and_throw_after(
+                        card_thrown, captures_before, 0
+                    )
                     if not continues:
                         return True
 
                 else:
                     # after flip
-                    flipped = card
                     (
                         captures_before,
+                        flipped,
                         bonus_captures,
                         junk_count,
                     ) = arg_after
@@ -308,12 +310,13 @@ class Game(Setting):
                     self.logger.log("select match", (flipped, action.match))
 
                     assert flipped.month is not None
+                    print(
+                        flipped, action.match, board.center_field[flipped.month]
+                    )
                     board.center_field[flipped.month].remove(action.match)
 
                     state.select_match = None
                     flags.select_match = False
-
-                card_thrown = card
 
             # check discard-and-match, ttadak, stacking, or clear;
             # and tune the junk count.
@@ -553,7 +556,9 @@ class Game(Setting):
 
         self.board.sort()
 
-    def _throw_card(self, card: Card) -> Tuple[Optional[CardList], int]:
+    def _throw_card(
+        self, card: Card, card_thrown: Card
+    ) -> Tuple[Optional[CardList], int]:
         """
         Throw a card (or a bomb), and returns
         (captures: CardList | None, junk_count: int).
@@ -576,7 +581,7 @@ class Game(Setting):
 
         assert card.month is not None
 
-        center_field_of_month = board.center_field[card.month]
+        center_field_of_month = copy.copy(board.center_field[card.month])
         if center_field_of_month == []:
             self._append_to_center_field(CardList([card]))
 
@@ -602,7 +607,7 @@ class Game(Setting):
             else:
                 flags.select_match = True
                 state.select_match = (
-                    card,
+                    card_thrown,
                     center_field_of_month,
                     None,
                 )
@@ -648,10 +653,11 @@ class Game(Setting):
 
     def _flip_and_throw_after(
         self,
+        card_thrown: Optional[Card],
         captures_before: CardList,
         junk_count_before: int,
     ) -> Tuple[bool, Card, CardList, Optional[CardList], int]:
-        # captures_before, junk_count_before
+        # card_thrown, captures_before, junk_count_before
         # -> continues, flipped, bonus_captures, captures_after, junk_count
 
         # flip the card on top of the drawing pile
@@ -663,7 +669,9 @@ class Game(Setting):
         ) = self._flip_card_until_normal()
 
         # throw the flipped normal card
-        (captures_after, junk_count_after) = self._throw_card(flipped)
+        (captures_after, junk_count_after) = self._throw_card(
+            flipped, card_thrown
+        )
 
         # sum all junk counts
         junk_count = junk_count_before + junk_count_flip + junk_count_after
@@ -676,6 +684,7 @@ class Game(Setting):
                 self.state.select_match[1],
                 (
                     CardList(captures_before),
+                    flipped,
                     CardList(bonus_captures),
                     junk_count,
                 ),
@@ -823,6 +832,7 @@ class Game(Setting):
             self.logger.log("take junk from opponent", junk)
 
     def calculate_scores(self, without_multiples: bool = False):
+        """Calculate the scores from the score factors."""
         kinds = [f.kind for f in self.state.score_factors[self.state.player]]
         if "four of a month" in kinds or "three stackings" in kinds:
             self.state.scores = [
