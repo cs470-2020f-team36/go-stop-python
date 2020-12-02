@@ -68,12 +68,9 @@ class Agent(ABC):
                     .argmax()
                     .item()
                 )
-                print("policy_index", action_index)
 
                 action = all_actions[action_index]
                 if action not in game.actions():
-                    print(game.actions())
-                    print(game.serialize())
                     action = random.choice(game.actions())
                 return action
 
