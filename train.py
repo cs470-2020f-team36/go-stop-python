@@ -95,7 +95,7 @@ class UCTNode:
     def encoded_game(self) -> tuple:
         """Return the encoded game w.r.t. the current player."""
         encoded_game = encode_game(self.game, self.game.state.player)
-        return tuple(encoded_game)
+        return tuple(encoded_game.int().tolist())
 
     def p(self, action: Action) -> float:
         """Return the prior probability distribution stored in `P`."""
@@ -279,6 +279,7 @@ def search(
 
 def create_root_node(game: Game, net: EncoderNet):
     """Create the root node and store the prior into `P`."""
+    global P
 
     node = UCTNode(game)
     encoded_game = Tensor(node.encoded_game()).float().unsqueeze(0)
