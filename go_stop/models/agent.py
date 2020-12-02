@@ -78,11 +78,11 @@ class Agent(ABC):
 
                 try:
                     policy, value = net(encoded_game)
-                    action_index = (
+                    policy = (
                         policy[0].squeeze().masked_fill(mask, 0)
                     ) ** (1 / args.infinitesimal_tau)
-                    action_index = action_index / action_index.sum()
-                    action_index = action_index.numpy()
+                    policy = policy / policy.sum()
+                    policy = policy.numpy()
 
                     value = value.squeeze().item()
                     return policy, value
