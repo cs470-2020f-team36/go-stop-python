@@ -78,13 +78,16 @@ class Agent(ABC):
 
                 try:
                     policy, value = net(encoded_game)
-                    policy = (
-                        policy[0].squeeze().masked_fill(mask, 0)
-                    ) ** (1 / args.infinitesimal_tau)
+                    print(policy, value)
+                    policy = policy[0].squeeze().masked_fill(mask, 0)
+                    policy = policy / policy.sum()
+                    policy = (policy[0]) ** (1 / args.infinitesimal_tau)
                     policy = policy / policy.sum()
                     policy = policy.numpy()
 
                     value = value.squeeze().item()
+                    print(policy, value)
+
                     return policy, value
 
                 except:
