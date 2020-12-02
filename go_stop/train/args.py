@@ -28,8 +28,8 @@ args.lr_decrease_rate = 0.92
 
 # Hyperparameters for MCTS
 args.c_puct = 1
-args.mcts_search_per_simul = 76
-args.num_episodes_per_evolvution = 24
+args.mcts_search_per_simul = 30
+args.num_episodes_per_evolvution = 12
 args.max_evolution = 100
 
 # The size of a sample from the observation

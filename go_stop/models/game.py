@@ -692,6 +692,8 @@ class Game(Setting):
         bonus_captures: CardList,
         captures_after: CardList,
     ) -> int:
+        print(card, captures_before, flipped, bonus_captures, captures_after)
+
         board = self.board
         state = self.state
 

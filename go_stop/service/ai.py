@@ -26,7 +26,7 @@ ai = Agent.from_net(net)
 
 
 def estimate(game: Game, player: Player) -> Tuple[List[float], float]:
-    """Return the estimation by the neural network.""" 
+    """Return the estimation by the neural network."""
     encoded_game = encode_game(game, player)
     net.eval()
     with torch.no_grad():
