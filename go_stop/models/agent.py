@@ -52,7 +52,7 @@ class Agent(ABC):
                 return action
 
             policy, _ = estimation
-            print([(str(all_actions[i]), p) for i, p in policy if p != 0])
+            print([(str(all_actions[i]), p) for i, p in enumerate(policy) if p != 0])
             action = choice(all_actions, size=1, p=policy)[0]
 
             return action
@@ -81,7 +81,6 @@ class Agent(ABC):
 
                 try:
                     policy, value = net(encoded_game)
-                    print(policy, value)
                     policy = policy.squeeze().masked_fill(mask, 0)
                     policy = policy / policy.sum()
                     policy = policy ** (1 / args.infinitesimal_tau)
@@ -89,7 +88,6 @@ class Agent(ABC):
                     policy = policy.numpy()
 
                     value = value.squeeze().item()
-                    print(policy, value)
 
                     return policy, value
 
