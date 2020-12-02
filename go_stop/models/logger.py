@@ -1,32 +1,41 @@
-from typing import Any
+"""
+logger.py
+
+Implement a logger of a game.
+"""
+
+
+from typing import Any, Literal
+
+
+Kind = Literal[
+    "turn change",  # arg: (int, int)
+    "throw",  # arg: Card
+    "flip",  # arg: Card
+    "bomb",  # arg: int
+    "shaking",  # arg: CardList
+    "append to hand",  # arg: (int, CardList)
+    "append to center field",  # arg: CardList
+    "append to capture field",  # arg: (int, CardList)
+    "take junk from opponent",  # arg: Card
+    "single match",  # arg: (Card, Card)
+    "double matches",  # arg: (Card, CardList)
+    "triple matches",  # arg: (Card, CardList)
+    "select match",  # arg: (Card, Card)
+    "discard and match",  # arg: (Card, Card)
+    "stacking",  # arg: CardList
+    "ttadak",  # arg: int
+    "move animal 9",  # arg: None
+    "clear",  # arg: None
+    "go",  # arg: bool
+    "four of a month",  # arg: CardList
+]
 
 
 class LoggerItem:
-    kinds = {
-        "turn change",  # arg: (int, int)
-        "throw",  # arg: Card
-        "flip",  # arg: Card
-        "bomb",  # arg: int
-        "shaking",  # arg: CardList
-        "append to hand",  # arg: (int, CardList)
-        "append to center field",  # arg: CardList
-        "append to capture field",  # arg: (int, CardList)
-        "take junk from opponent",  # arg: Card
-        "single match",  # arg: (Card, Card)
-        "double matches",  # arg: (Card, CardList)
-        "triple matches",  # arg: (Card, CardList)
-        "select match",  # arg: (Card, Card)
-        "discard and match",  # arg: (Card, Card)
-        "stacking",  # arg: CardList
-        "ttadak",  # arg: int
-        "move animal 9",  # arg: None
-        "clear",  # arg: None
-        "go",  # arg: bool
-        "four of a month",  # arg: CardList
-    }
+    """An item of a logger"""
 
-    def __init__(self, kind: str, arg):
-        assert kind in LoggerItem.kinds
+    def __init__(self, kind: Kind, arg):
         self.kind = kind
         self.arg = arg
 
@@ -80,18 +89,19 @@ class LoggerItem:
 
 
 class Logger:
+    """Logger class"""
+
     def __init__(self):
         self.logs = []
-
-    def log(self, kind: str, arg: Any = None):
-        self.logs.append(LoggerItem(kind, arg))
 
     def __str__(self):
         return "[{}]".format(", ".join([str(item) for item in self.logs]))
 
-    def show(self):
-        for item in self.logs:
-            print(str(item))
+    def log(self, kind: Kind, arg: Any = None):
+        """Append a log item to self.logs"""
+
+        self.logs.append(LoggerItem(kind, arg))
 
     def serialize(self):
+        """Serialize the logger"""
         return [str(item) for item in self.logs]

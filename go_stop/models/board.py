@@ -1,3 +1,9 @@
+"""
+board.py
+
+Implement the board of Go-Stop, which is the abstraction of all card fields.
+"""
+
 from copy import copy
 import random
 from typing import Dict, List, Set, Tuple
@@ -10,24 +16,28 @@ from .setting import Setting
 
 class Board(Setting):
     """
-    Abstracting all card fields
+    Abstraction of all card fields.
     """
 
-    def __init__(self, player: int = 0):
+    def __init__(self, starting_player: int = 0):
         super().__init__()
 
-        # shuffle the drawing pile
-        self.drawing_pile: CardList = copy(go_stop_cards)
-        random.shuffle(self.drawing_pile)
+        while True:
+            # shuffle the drawing pile
+            self.drawing_pile: CardList = copy(go_stop_cards)
+            random.shuffle(self.drawing_pile)
 
-        # hands
-        self.hands: List[CardList] = [
-            self.drawing_pile[0:10],
-            self.drawing_pile[10:20],
-        ]
+            # hands
+            self.hands: List[CardList] = [
+                self.drawing_pile[0:10],
+                self.drawing_pile[10:20],
+            ]
 
-        # center field
-        center_field: CardList = self.drawing_pile[20:28]
+            # temporary center field
+            temp_center_field: CardList = self.drawing_pile[20:28]
+
+            if not self._is_reset_necessary(temp_center_field):
+                break
 
         # remaining drawing pile
         self.drawing_pile = self.drawing_pile[28:]
@@ -35,12 +45,14 @@ class Board(Setting):
         # capture fields
         self.capture_fields: List[CardList] = [CardList(), CardList()]
 
-        center_field = self._move_cards_at_beginning(player, center_field)
+        temp_center_field = self._move_cards_at_beginning(
+            starting_player, temp_center_field
+        )
 
         # sort card lists
-        center_field.sort()
+        temp_center_field.sort()
         self.center_field: Dict[int, CardList] = dict(
-            (month, center_field.of_month(month)) for month in range(1, 13)
+            (month, temp_center_field.of_month(month)) for month in range(1, 13)
         )
 
         for month in range(1, 13):
@@ -48,21 +60,54 @@ class Board(Setting):
 
         self.sort()
 
+    def _is_reset_necessary(self, temp_center_field: CardList) -> bool:
+        """
+        if all players have a four-of-a-month
+        or the center field has a four-of-a-month
+        (only if proceed_when_center_field_has_a_four_of_a_month is not set),
+        reset the board.
+        """
+
+        four_of_a_month = self.four_of_a_month()
+
+        if self.proceed_when_center_field_has_a_four_of_a_month:
+            return len(
+                [
+                    player
+                    for player in [0, 1]
+                    if len(four_of_a_month[player]) > 0
+                ]
+            ) == 2 or any(
+                len(temp_center_field.of_month(month)) == 4
+                for month in range(1, 13)
+            )
+
+        return (
+            len(
+                [
+                    player
+                    for player in [0, 1]
+                    if len(four_of_a_month[player]) > 0
+                ]
+            )
+            == 2
+        )
+
     def _move_cards_at_beginning(
-        self, player: int, center_field: CardList
+        self, starting_player: int, temp_center_field: CardList
     ) -> CardList:
         """
         A private method which moves bonus cards and four-of-a-months
-        at the beginning to the first player.
+        at the beginning to the starting_player.
 
         In detail,
 
         1. If the center field has bonus cards,
-           place them into player 0's capture field and
+           place them into starting_player's capture field and
            turn the top card of the drawing pile into the center field.
 
         2. If the center field has four of a month,
-           place them into player 0's capture field and
+           place them into starting_player's capture field and
            turn the top card of the drawing pile into the center field.
         [2: only when self.proceed_when_center_field_has_a_four_of_a_month is True]
 
@@ -71,30 +116,34 @@ class Board(Setting):
 
         changed = False
 
-        for n in {2, 3}:
-            if BonusCard(n) in center_field:
-                center_field.remove(BonusCard(n))
+        for bonus_multiple in {2, 3}:
+            if BonusCard(bonus_multiple) in temp_center_field:
+                temp_center_field.remove(BonusCard(bonus_multiple))
                 card = self.drawing_pile.pop(0)
-                center_field.append(card)
-                self.capture_fields[player].append(BonusCard(n))
+                temp_center_field.append(card)
+                self.capture_fields[starting_player].append(
+                    BonusCard(bonus_multiple)
+                )
                 changed = True
 
         if self.proceed_when_center_field_has_a_four_of_a_month:
             for month in range(1, 13):
-                if len(center_field.of_month(month)) == 4:
-                    center_field = center_field.except_month(month)
+                if len(temp_center_field.of_month(month)) == 4:
+                    temp_center_field = temp_center_field.except_month(month)
                     cards = self.drawing_pile[0:4]
-                    center_field.extend(cards)
+                    temp_center_field.extend(cards)
                     self.drawing_pile = self.drawing_pile[4:]
-                    self.capture_fields[player].extend(
+                    self.capture_fields[starting_player].extend(
                         go_stop_cards.of_month(month)
                     )
                     changed = True
 
         if changed:
-            return self._move_cards_at_beginning(player, center_field)
+            return self._move_cards_at_beginning(
+                starting_player, temp_center_field
+            )
 
-        return center_field
+        return temp_center_field
 
     def four_of_a_month(self) -> Tuple[Set[int], Set[int]]:
         """
@@ -103,7 +152,7 @@ class Board(Setting):
 
         four_of_a_month: Tuple[Set[int], Set[int]] = (set(), set())
 
-        for player in {0, 1}:
+        for player in [0, 1]:
             for month in range(1, 13):
                 if set(go_stop_cards.of_month(month)).issubset(
                     self.hands[player]
@@ -113,7 +162,9 @@ class Board(Setting):
         return four_of_a_month
 
     def sort(self) -> None:
-        for player in {0, 1}:
+        """Sort hands of players."""
+
+        for player in [0, 1]:
             self.hands[player].sort()
 
     def serialize(self) -> dict:
@@ -156,16 +207,15 @@ class Board(Setting):
             CardList(Card.deserialize(s) for s in data["capture_fields"][1]),
         ]
 
-        d = data["center_field"]
+        center_field = data["center_field"]
         board.center_field = dict(
             (
                 month,
                 CardList(
-                    Card.deserialize(s)
-                    for s in (
-                        d[month.__str__()] if month.__str__() in d else []
-                    )
-                ),
+                    Card.deserialize(s) for s in center_field[month.__str__()]
+                )
+                if month.__str__() in center_field
+                else CardList([]),
             )
             for month in range(1, 13)
         )
@@ -174,7 +224,7 @@ class Board(Setting):
             Card.deserialize(s) for s in data["drawing_pile"]
         )
 
-        for player in {0, 1}:
+        for player in [0, 1]:
             board.hands[player].sort()
 
         return board

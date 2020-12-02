@@ -1,6 +1,12 @@
+"""
+action.py
+
+Implement an action during a Go-Stop game.
+"""
+
+
 from abc import ABC, abstractmethod
-from typing import Any, List, Set
-from typing_extensions import Literal
+from typing import Any, Literal
 
 from .card import Card
 from ..constants.card import go_stop_cards
@@ -26,20 +32,6 @@ class Action(ABC):
     There are maximum 167 (50 + 1 + 12 + 48 + 2 + 48 + 2 + 2 + 2) possible actions.
     """
 
-    kinds: Set[Kind] = {
-        "throw",
-        "throw bomb",
-        "bomb",
-        "shakable",
-        "shaking",
-        "select match",
-        "four of a month",
-        "go",
-        "move animal 9",
-    }
-
-    all_actions: List["Action"]
-
     def __init__(self, kind: Kind, arg: Any):
         self.kind = kind
         self.arg = arg
@@ -60,10 +52,12 @@ class Action(ABC):
 
     @abstractmethod
     def serialize(self) -> dict:
-        pass
+        """Serialize an action"""
 
     @staticmethod
     def deserialize(data: dict):
+        """Deserialize an action"""
+
         if data["kind"] == "throw":
             return ActionThrow(Card.deserialize(data["card"]))
 
@@ -212,18 +206,27 @@ class ActionGo(Action):
         return {"kind": self.kind, "option": self.option}
 
 
-Action.all_actions = [
+all_actions = [
     *[ActionThrow(card) for card in go_stop_cards],
     ActionThrowBomb(),
     *[ActionBomb(month) for month in range(1, 13)],
-    *[ActionShakable(card) for card in go_stop_cards if card.month != None],
+    *[ActionShakable(card) for card in go_stop_cards if card.month is not None],
     *[ActionShaking(option) for option in {True, False}],
     *[
         ActionSelectMatch(match)
         for match in go_stop_cards
-        if match.month != None
+        if match.month is not None
     ],
     *[ActionFourOfAMonth(option) for option in {True, False}],
     *[ActionMoveAnimal9(option) for option in {True, False}],
     *[ActionGo(option) for option in {True, False}],
 ]
+
+
+def get_action_index(action: Action) -> int:
+    """Return the index of an action"""
+
+    return all_actions.index(action)
+
+
+NUM_ACTIONS = len(all_actions)

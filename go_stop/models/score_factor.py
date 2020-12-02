@@ -1,5 +1,4 @@
-from typing import Any, Callable, Set
-from typing_extensions import Literal
+from typing import Any, Callable, Literal, Set
 
 from .setting import Setting
 

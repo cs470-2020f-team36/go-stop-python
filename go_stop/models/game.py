@@ -1,6 +1,11 @@
+"""
+game.py
+
+Implement the main Go-Stop game class.
+"""
+
 from itertools import groupby
 from typing import Any, List, Optional, Tuple, cast
-from typing_extensions import Literal
 
 from ..constants.card import go_stop_cards
 from .action import (
@@ -27,67 +32,40 @@ from .card import (
 from .card_list import CardList
 from .flags import Flags
 from .logger import Logger
+from .player import Player, get_opponent
 from .scorer import Scorer
 from .score_factor import ScoreFactor
 from .setting import Setting
 from .state import State
 
 
+# pylint: disable=too-many-lines
+
+
 class Game(Setting):
-    def __init__(self, player: Literal[0, 1] = 0):
+    """Go-Stop game class"""
+
+    def __init__(self, starting_player: Player = 0):
         super().__init__()
 
-        self.board = Board(player)
-        self.state = State(player)
+        self.board = Board(starting_player)
+        self.state = State(starting_player)
         self.flags = Flags()
         self.logger = Logger()
 
         four_of_a_month = self.board.four_of_a_month()
 
-        if self.proceed_when_center_field_has_a_four_of_a_month:
-            # if all players have a four-of-a-month
-            # or the center field has a four-of-a-month,
-            # reset the board
-            while len(
-                [
-                    player
-                    for player in {0, 1}
-                    if len(four_of_a_month[player]) > 0
-                ]
-            ) == 2 or any(
-                len(l) == 4 for l in self.board.center_field.values()
-            ):
-                self.board = Board()
-                four_of_a_month = self.board.four_of_a_month()
-        else:
-            # if all players have a four-of-a-month,
-            # reset the board
-            while (
-                len(
-                    [
-                        player
-                        for player in {0, 1}
-                        if len(four_of_a_month[player]) > 0
-                    ]
-                )
-                == 2
-            ):
-                self.board = Board()
-                four_of_a_month = self.board.four_of_a_month()
-
-        p = [
-            cast(Literal[0, 1], player)
-            for player in {0, 1}
+        players_having_four_of_a_month = [
+            cast(Player, player)
+            for player in [0, 1]
             if len(four_of_a_month[player]) > 0
         ]
-        if len(p) == 1:
-            self.state.player = p[0]
+        if players_having_four_of_a_month != []:
+            self.state.player = players_having_four_of_a_month[0]
             self.flags.four_of_a_month = True
 
     def actions(self) -> List[Action]:
-        """
-        Returns a list of possible actions with this game
-        """
+        """Returns a list of possible actions with this game"""
 
         board = self.board
         state = self.state
@@ -232,7 +210,7 @@ class Game(Setting):
                     captures_after,
                     junk_count,
                 ) = self._flip_and_throw_after(
-                    action, captures_before, junk_count_before
+                    captures_before, junk_count_before
                 )
                 if not continues:
                     return True
@@ -281,7 +259,7 @@ class Game(Setting):
                     captures_after,
                     junk_count,
                 ) = self._flip_and_throw_after(
-                    action, captures_before, junk_count_before
+                    captures_before, junk_count_before
                 )
                 if not continues:
                     return True
@@ -312,7 +290,7 @@ class Game(Setting):
                         bonus_captures,
                         captures_after,
                         junk_count,
-                    ) = self._flip_and_throw_after(action, captures_before, 0)
+                    ) = self._flip_and_throw_after(captures_before, 0)
                     if not continues:
                         return True
 
@@ -402,8 +380,10 @@ class Game(Setting):
                     return True
 
             # pass the turn
-            self.logger.log("turn change", (state.player, 1 - state.player))
-            state.player = cast(Literal[0, 1], 1 - state.player)
+            self.logger.log(
+                "turn change", (state.player, get_opponent(state.player))
+            )
+            state.player = get_opponent(state.player)
 
             # push back?
             if (
@@ -510,8 +490,10 @@ class Game(Setting):
                     return True
 
             # pass the turn
-            self.logger.log("turn change", (state.player, 1 - state.player))
-            state.player = cast(Literal[0, 1], 1 - state.player)
+            self.logger.log(
+                "turn change", (state.player, get_opponent(state.player))
+            )
+            state.player = get_opponent(state.player)
 
             # push back?
             if (
@@ -532,7 +514,7 @@ class Game(Setting):
 
         self.board.hands[self.state.player].extend(cards)
         self.logger.log("append to hand", (self.state.player, CardList(cards)))
-        self._sort_board()
+        self.sort_board()
 
     def _append_to_center_field(self, cards: CardList) -> None:
         """
@@ -552,7 +534,7 @@ class Game(Setting):
 
         self.board.center_field[month].extend(cards)
         self.logger.log("append to center field", CardList(cards))
-        self._sort_board()
+        self.sort_board()
 
     def _append_to_capture_field(self, cards: CardList) -> None:
         """
@@ -564,7 +546,7 @@ class Game(Setting):
             "append to capture field", (self.state.player, CardList(cards))
         )
 
-    def _sort_board(self) -> None:
+    def sort_board(self) -> None:
         """
         Sorts the hands and the center field of the board.
         """
@@ -666,11 +648,11 @@ class Game(Setting):
 
     def _flip_and_throw_after(
         self,
-        action: Action,
         captures_before: CardList,
         junk_count_before: int,
     ) -> Tuple[bool, Card, CardList, Optional[CardList], int]:
-        # action, captures_before, junk_count_before -> continues, flipped, bonus_captures, captures_after, junk_count
+        # captures_before, junk_count_before
+        # -> continues, flipped, bonus_captures, captures_after, junk_count
 
         # flip the card on top of the drawing pile
         # until we get a normal [non-bonus] card
@@ -788,13 +770,14 @@ class Game(Setting):
 
         return junk_count
 
-    def _take_junk_from_opponent(self, n: int) -> None:
+    def _take_junk_from_opponent(self, junk_count: int) -> None:
         board = self.board
         state = self.state
-        opponent = 1 - state.player
+        opponent = get_opponent(state.player)
 
-        i = n
-        while i > 0:
+        remaining_junk_count = junk_count
+
+        while remaining_junk_count > 0:
             singles = [
                 card
                 for card in board.capture_fields[opponent]
@@ -806,7 +789,7 @@ class Game(Setting):
                 if card.kind in {"junk", "bonus"} and card.multiple == 2
             ] + (
                 [AnimalCard(9)]
-                if state.animal_9_moved == True
+                if state.animal_9_moved
                 and AnimalCard(9) in board.capture_fields[opponent]
                 else []
             )
@@ -819,21 +802,21 @@ class Game(Setting):
             if len(singles) == 0 and len(doubles) == 0 and len(triples) == 0:
                 return
 
-            if len(triples) > 0 and i >= 3:
+            if len(triples) > 0 and remaining_junk_count >= 3:
                 junk = triples[-1]
-                i -= 3
-            elif len(doubles) > 0 and i >= 2:
+                remaining_junk_count -= 3
+            elif len(doubles) > 0 and remaining_junk_count >= 2:
                 junk = doubles[-1]
-                i -= 2
+                remaining_junk_count -= 2
             elif len(singles) > 0:
                 junk = singles[-1]
-                i -= 1
+                remaining_junk_count -= 1
             elif len(doubles) > 0:
                 junk = doubles[-1]
-                i -= 2
+                remaining_junk_count -= 2
             elif len(triples) > 0:
                 junk = triples[-1]
-                i -= 3
+                remaining_junk_count -= 3
 
             self.board.capture_fields[opponent].remove(junk)
             self.board.capture_fields[state.player].append(junk)
@@ -849,17 +832,19 @@ class Game(Setting):
 
         self.state.score_factors[self.state.player] = []
 
-        cf = self.board.capture_fields[self.state.player]
+        capture_field = self.board.capture_fields[self.state.player]
 
         # 1. bright
         # three/four brights
-        bright_point = len([card for card in cf if card.kind == "bright"])
+        bright_point = len(
+            [card for card in capture_field if card.kind == "bright"]
+        )
 
         if bright_point < 3:
             bright_point = 0
 
         # three brights with rain (December)
-        if bright_point == 3 and BrightCard(12) in cf:
+        if bright_point == 3 and BrightCard(12) in capture_field:
             bright_point = 2
 
         # five brights
@@ -872,9 +857,9 @@ class Game(Setting):
 
         # 2. animal
         num_of_animals = len(
-            cf.apply_filter(lambda card: card.kind == "animal")
+            capture_field.apply_filter(lambda card: card.kind == "animal")
         )
-        if AnimalCard(9) in cf and self.state.animal_9_moved == True:
+        if AnimalCard(9) in capture_field and self.state.animal_9_moved:
             num_of_animals -= 1
         self.state.score_factors[self.state.player].append(
             ScoreFactor("animal", num_of_animals)
@@ -882,7 +867,7 @@ class Game(Setting):
 
         # 3. ribbon
         num_of_ribbons = len(
-            cf.apply_filter(lambda card: card.kind == "ribbon")
+            capture_field.apply_filter(lambda card: card.kind == "ribbon")
         )
         self.state.score_factors[self.state.player].append(
             ScoreFactor("ribbon", num_of_ribbons)
@@ -890,9 +875,11 @@ class Game(Setting):
 
         # 4. junk
         junk_count = sum(
-            card.multiple for card in cf if card.kind in {"junk", "bonus"}
+            card.multiple
+            for card in capture_field
+            if card.kind in {"junk", "bonus"}
         )
-        if AnimalCard(9) in cf and self.state.animal_9_moved == True:
+        if AnimalCard(9) in capture_field and self.state.animal_9_moved:
             junk_count += 2
 
         self.state.score_factors[self.state.player].append(
@@ -900,23 +887,31 @@ class Game(Setting):
         )
 
         # 5. five birds
-        if {AnimalCard(2), AnimalCard(4), AnimalCard(8)}.issubset(cf):
+        if {AnimalCard(2), AnimalCard(4), AnimalCard(8)}.issubset(
+            capture_field
+        ):
             self.state.score_factors[self.state.player].append(
                 ScoreFactor("five birds")
             )
 
         # 6. blue/red/plant ribbons
-        if {RibbonCard(6), RibbonCard(9), RibbonCard(10)}.issubset(cf):
+        if {RibbonCard(6), RibbonCard(9), RibbonCard(10)}.issubset(
+            capture_field
+        ):
             self.state.score_factors[self.state.player].append(
                 ScoreFactor("blue ribbons")
             )
 
-        if {RibbonCard(1), RibbonCard(2), RibbonCard(3)}.issubset(cf):
+        if {RibbonCard(1), RibbonCard(2), RibbonCard(3)}.issubset(
+            capture_field
+        ):
             self.state.score_factors[self.state.player].append(
                 ScoreFactor("red ribbons")
             )
 
-        if {RibbonCard(4), RibbonCard(5), RibbonCard(7)}.issubset(cf):
+        if {RibbonCard(4), RibbonCard(5), RibbonCard(7)}.issubset(
+            capture_field
+        ):
             self.state.score_factors[self.state.player].append(
                 ScoreFactor("plant ribbons")
             )
@@ -935,10 +930,14 @@ class Game(Setting):
                 )
             )
             # 9. penalties
-            opposite_cf = self.board.capture_fields[1 - self.state.player]
+            opposite_capture_field = self.board.capture_fields[
+                1 - self.state.player
+            ]
             # bright penalty
             if (
-                opposite_cf.apply_filter(lambda card: card.kind == "bright")
+                opposite_capture_field.apply_filter(
+                    lambda card: card.kind == "bright"
+                )
                 == []
                 and bright_point > 0
             ):
@@ -955,12 +954,12 @@ class Game(Setting):
             # junk penalty
             opposite_junk_count = sum(
                 card.multiple
-                for card in opposite_cf
+                for card in opposite_capture_field
                 if card.kind in {"junk", "bonus"}
             )
             if (
-                AnimalCard(9) in opposite_cf
-                and self.state.animal_9_moved == True
+                AnimalCard(9) in opposite_capture_field
+                and self.state.animal_9_moved
             ):
                 opposite_junk_count += 2
 
@@ -989,7 +988,7 @@ class Game(Setting):
         self._calculate_scores(without_multiples=True)
         state.go_histories[state.player][-1] = self.state.scores[state.player]
 
-        state.player = cast(Literal[0, 1], 1 - state.player)
+        state.player = cast(Player, 1 - state.player)
 
         self.logger.log("go", True)
 
@@ -1025,6 +1024,7 @@ class Game(Setting):
         self.logger.log("go", False)
 
     def serialize(self) -> dict:
+        """Serialize the game"""
         return {
             "board": self.board.serialize(),
             "state": self.state.serialize(),
@@ -1034,6 +1034,7 @@ class Game(Setting):
 
     @staticmethod
     def deserialize(data: dict):
+        """Deserialize the game"""
         game = Game()
 
         game.board = Board.deserialize(data["board"])

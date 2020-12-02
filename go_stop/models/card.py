@@ -1,12 +1,15 @@
+"""
+card.py
+
+Implement a class for cards used in Go-Stop.
+"""
+
 from abc import ABC, abstractmethod
-from typing import Any, Optional
-from typing_extensions import Literal
+from typing import Any, Literal, Optional
 
 
 class Card(ABC):
-    """
-    ABC for cards.
-    """
+    """ABC for cards."""
 
     def __init__(self, kind: str, month: Optional[int], index: int):
         self.kind = kind
@@ -28,7 +31,11 @@ class Card(ABC):
     def __hash__(self):
         return hash((self.kind, self.month, self.index))
 
-    def _to_level(self):
+    def __lt__(self, obj):
+        assert isinstance(obj, Card)
+        return self._to_level() < obj._to_level()
+
+    def _to_level(self) -> int:
         """
         A private method used to sort cards.
         """
@@ -42,19 +49,14 @@ class Card(ABC):
             "bomb": 6,
         }
         return (
-            (13 if self.month == None else self.month) * 1000
+            (13 if self.month is None else self.month) * 1000
             + kind_to_level[self.kind] * 100
             + self.index
         )
 
-    def __lt__(self, obj):
-        assert isinstance(obj, Card)
-        return self._to_level() < obj._to_level()
-
-    def serialize(self: "Card") -> str:
-        """
-        Serialize a card.
-        """
+    # pylint: disable=too-many-return-statements
+    def serialize(self: Card) -> str:
+        """Serialize a card."""
 
         if self.kind == "bright":
             assert self.month is not None
@@ -83,9 +85,7 @@ class Card(ABC):
 
     @staticmethod
     def deserialize(serial: str) -> "Card":
-        """
-        Deserialize to a card.
-        """
+        """Deserialize to a card."""
 
         if serial[0] == "B":
             return BrightCard(int(serial[1:]))
@@ -110,6 +110,8 @@ class Card(ABC):
 
 
 class BrightCard(Card):
+    """Bright cards."""
+
     months = {1, 3, 8, 11, 12}
 
     def __init__(self, month: int):
@@ -121,6 +123,8 @@ class BrightCard(Card):
 
 
 class AnimalCard(Card):
+    """Animal cards."""
+
     months = {2, 4, 5, 6, 7, 8, 9, 10, 12}
 
     def __init__(self, month: int):
@@ -132,6 +136,8 @@ class AnimalCard(Card):
 
 
 class RibbonCard(Card):
+    """Ribbon cards."""
+
     months = {1, 2, 3, 4, 5, 6, 7, 9, 10, 12}
 
     def __init__(self, month: int):
@@ -151,12 +157,14 @@ class RibbonCard(Card):
         translation = {"blue": "청", "red": "홍", "plant": "초"}
         return "{}월 띠".format(self.month) + (
             " ({}단)".format(translation[self.ribbon_color])
-            if self.ribbon_color != None
+            if self.ribbon_color is not None
             else ""
         )
 
 
 class JunkCard(Card):
+    """Junk cards."""
+
     def __init__(self, month: int, index: int = 0, multiple: int = 1):
         assert multiple == 1 or multiple == 2
         if month == 11 and multiple == 2:
@@ -181,6 +189,8 @@ class JunkCard(Card):
 
 
 class BonusCard(Card):
+    """Bonus cards."""
+
     def __init__(self, multiple: Literal[2, 3]):
         self.multiple = multiple
         super().__init__("bonus", None, multiple - 2)
@@ -191,7 +201,9 @@ class BonusCard(Card):
 
 
 class SpecialCard(Card):
-    def __init__(self, kind: Literal["bomb", "hidden"], index: int):
+    """Special cards: bombs and hidden cards."""
+
+    def __init__(self, kind: Literal["bomb", "hidden"], index: int = 0):
         super().__init__(kind, None, index)
 
     def __str__(self):

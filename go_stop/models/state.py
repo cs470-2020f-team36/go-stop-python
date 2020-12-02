@@ -1,18 +1,26 @@
+"""
+state.py
+
+Gather all the states during a Go-Stop game.
+"""
+
 from typing import List, Optional, Set, Tuple, Union, cast
-from typing_extensions import Literal
 
 from .card import Card
 from .card_list import CardList
+from .player import Player
 from .score_factor import ScoreFactor
 
 
 class State:
-    def __init__(self, player: Literal[0, 1] = 0):
+    """State class."""
+
+    def __init__(self, starting_player: Player = 0):
         """Index of the starting player."""
-        self.starting_player: Literal[0, 1] = player
+        self.starting_player: Player = starting_player
 
         """Index of the current player."""
-        self.player: Literal[0, 1] = player
+        self.player: Player = starting_player
 
         """Index of the bomb used to guarantee the uniqueness of `index`."""
         self.bomb_increment: int = 0
@@ -93,10 +101,10 @@ class State:
         self.ended: bool = False
 
         """
-        winner: Optional[Literal[0, 1]]
+        winner: Optional[Player]
         Who won the game, if it is ended.
         """
-        self.winner: Optional[Literal[0, 1]] = None
+        self.winner: Optional[Player] = None
 
     def serialize(self) -> dict:
         """

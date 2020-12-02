@@ -46,7 +46,7 @@ class RoomList(list):
                 "errorCode": 1,
             }
 
-        if self.find_by_client_id(client_id) != None:
+        if self.find_by_client_id(client_id) is not None:
             return {
                 "success": False,
                 "error": "The client is already joined in a room",

@@ -1,11 +1,12 @@
-from typing_extensions import Literal
+from typing import Literal
 
+from .player import Player
 from .state import State
 
 
 class Scorer:
     @staticmethod
-    def calculate(state: State, player: Literal[0, 1]) -> int:
+    def calculate(state: State, player: Player) -> int:
         result = 0
 
         for factor in state.score_factors[player]:
