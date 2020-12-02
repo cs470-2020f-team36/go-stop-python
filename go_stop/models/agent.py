@@ -59,6 +59,8 @@ class Agent(ABC):
 
     def estimate(self, game: Game):
         """Query an action to the agent with given game"""
+        if game.actions() == []:
+            return None
 
         if self.kind == "net":
             net = self.net
