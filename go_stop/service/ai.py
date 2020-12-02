@@ -43,6 +43,7 @@ def estimate(game: Game, player: Player) -> Tuple[List[float], float]:
             == 0
         )
         policy = policy.masked_fill(mask, 0)
+        print("policy:", policy)
         policy = policy / torch.sum(policy)
 
         return policy.squeeze().tolist(), value.squeeze().item()
