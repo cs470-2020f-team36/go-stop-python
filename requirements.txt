@@ -27,7 +27,7 @@ regex==2020.11.13
 shortuuid==1.0.1
 six==1.15.0
 toml==0.10.2
-torch==1.7.0+cpu
+https://download.pytorch.org/whl/cpu/torch-1.7.0%2Bcpu-cp36-cp36m-linux_x86_64.whl
 tqdm==4.54.0
 typed-ast==1.4.1
 typing-extensions==3.7.4.3
