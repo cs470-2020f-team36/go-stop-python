@@ -12,7 +12,7 @@ from ..models.agent import Agent
 
 
 net: EncoderNet = EncoderNet()
-ckpt_path = args / "best.pt"
+ckpt_path = args.root_dir / "best.pt"
 
 if ckpt_path.is_file():
     net.load_state_dict(torch.load(ckpt_path))

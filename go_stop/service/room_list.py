@@ -143,14 +143,7 @@ class RoomList(list):
                 "errorCode": 3,
             }
 
-        if len(room.players) != 2 and client_id != "kanu":
-            return {
-                "success": False,
-                "error": "Competing with AlphaGoStop is not availble yet",
-                "errorCode": 4,
-            }
-
-        if len(room.players) != 2:
+        if len(room.players) == 1:
             room.start_game(single_player=True)
 
         else:
