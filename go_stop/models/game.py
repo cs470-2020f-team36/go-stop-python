@@ -215,6 +215,8 @@ class Game(Setting):
                 if not continues:
                     return True
 
+                card_thrown = action.card
+
             # handles events on "bomb" until flipping
             elif action.kind == "bomb":
                 month = action.arg
@@ -311,6 +313,8 @@ class Game(Setting):
                     state.select_match = None
                     flags.select_match = False
 
+                card_thrown = card
+
             # check discard-and-match, ttadak, stacking, or clear;
             # and tune the junk count.
             #
@@ -325,7 +329,7 @@ class Game(Setting):
             captures_after = cast(CardList, captures_after)
 
             junk_count += self._check_after_flip(
-                card if action.kind in {"throw", "select match"} else None,
+                card_thrown if action.kind in {"throw", "select match"} else None,
                 captures_before,
                 flipped,
                 bonus_captures,
