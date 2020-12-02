@@ -239,17 +239,7 @@ def on_play(msg):
 
                 action = ai.query(game)
                 game.play(action)
-                time.sleep(2)
-
-                result = room.serialize_game()
-                emit(
-                    "spectate game response",
-                    {
-                        "success": True,
-                        "result": result,
-                    },
-                    broadcast=True,
-                )
+                time.sleep(1.3)
 
         if not game.state.ended:
             game.calculate_scores(without_multiples=True)
