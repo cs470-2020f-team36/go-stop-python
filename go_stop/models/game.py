@@ -325,11 +325,7 @@ class Game(Setting):
             captures_after = cast(CardList, captures_after)
 
             junk_count += self._check_after_flip(
-                cast(ActionThrow, action).card
-                if action.kind == "throw"
-                else cast(ActionSelectMatch, action).match
-                if action.kind == "select match"
-                else None,
+                card if action.kind in {"throw", "select match"} else None,
                 captures_before,
                 flipped,
                 bonus_captures,
