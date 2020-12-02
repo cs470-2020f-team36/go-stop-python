@@ -61,17 +61,25 @@ class Agent(ABC):
                     == 0
                 )
 
-                action_index = (
-                    net(encoded_game)[0].squeeze().masked_fill(mask, 0)
-                ) ** (1 / args.infinitesimal_tau)
-                action_index = action_index.numpy()
-                action_index = choice(range(NUM_ACTIONS), 1, p=action_index)[0]
+                try:
+                    action_index = (
+                        net(encoded_game)[0].squeeze().masked_fill(mask, 0)
+                    ) ** (1 / args.infinitesimal_tau)
+                    action_index = action_index / action_index.sum()
+                    action_index = action_index.numpy()
+                    action_index = choice(
+                        range(NUM_ACTIONS), 1, p=action_index
+                    )[0]
 
-                print(action_index)
+                    print(action_index)
 
-                action = all_actions[action_index]
-                if action not in game.actions():
+                    action = all_actions[action_index]
+                    if action not in game.actions():
+                        action = random.choice(game.actions())
+
+                except:
                     action = random.choice(game.actions())
+
                 return action
 
     @staticmethod
