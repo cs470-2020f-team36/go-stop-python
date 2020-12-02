@@ -462,10 +462,12 @@ class Game(Setting):
             if action.option:
                 # go
                 self._go()
+                return True
+
             else:
                 # stop
                 self._stop()
-            return True
+                return True
 
         if action.kind == "move animal 9":
             action = cast(ActionMoveAnimal9, action)
