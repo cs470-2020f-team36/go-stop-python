@@ -5,6 +5,7 @@ Implement the class for a list of cards with a bunch of methods.
 """
 
 
+from __future__ import annotations
 from typing import Callable, List
 from .card import Card
 

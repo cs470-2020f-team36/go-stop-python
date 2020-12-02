@@ -55,7 +55,7 @@ class Card(ABC):
         )
 
     # pylint: disable=too-many-return-statements
-    def serialize(self: Card) -> str:
+    def serialize(self) -> str:
         """Serialize a card."""
 
         if self.kind == "bright":

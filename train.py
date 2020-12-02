@@ -7,6 +7,7 @@ as the most time-consuming step in this project is MCTS,
 which is difficult to accelerate using GPU.
 """
 
+from __future__ import annotations
 import json
 import math
 import random
