@@ -84,7 +84,7 @@ class Room:
             "singlePlayer": self.single_player,
         }
 
-    def serialize_game(self) -> Optional[dict]:
+    def serialize_game(self, set_estimate: bool = True) -> Optional[dict]:
         """Serialize game if the game is presented in this room."""
         if self.game is None:
             return None
@@ -99,7 +99,7 @@ class Room:
             }
         )
 
-        if self.single_player and not self.game.state.ended:
+        if set_estimate and self.single_player and not self.game.state.ended:
             ai_index = self.players.index(os.environ["AI_AGENT_ID"])
             estimated_result = estimate(self.game, ai_index)
             result.update({"estimate": list(estimated_result)})
