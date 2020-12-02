@@ -74,7 +74,7 @@ class RoomList(list):
                 "errorCode": 3,
             }
 
-        if len(room.players) == 2:
+        if room.num_of_players() == 2:
             return {
                 "success": False,
                 "error": f"The room {room.uid} has 2 people already.",

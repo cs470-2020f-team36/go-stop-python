@@ -23,6 +23,12 @@ class Room:
         self.game = None
         self.single_player = False
 
+    def num_of_players(self):
+        """The number of human players."""
+        if os.environ["AI_AGENT_ID"] in self.players:
+            return len(self.players) - 1
+        return len(self.players)
+
     def join(self, client_id: str):
         """Let the client `client_id` join the room."""
         self.players.append(client_id)
