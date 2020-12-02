@@ -69,6 +69,8 @@ class Agent(ABC):
                     .item()
                 )
 
+                print(game.serialize())
+
                 action = all_actions[action_index]
                 if action not in game.actions():
                     action = random.choice(game.actions())
