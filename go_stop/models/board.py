@@ -71,26 +71,22 @@ class Board(Setting):
         four_of_a_month = self.four_of_a_month()
 
         if self.proceed_when_center_field_has_a_four_of_a_month:
-            return len(
-                [
-                    player
-                    for player in [0, 1]
-                    if len(four_of_a_month[player]) > 0
-                ]
-            ) == 2 or any(
-                len(temp_center_field.of_month(month)) == 4
-                for month in range(1, 13)
+            return (
+                len(
+                    [
+                        player
+                        for player in [0, 1]
+                        if len(four_of_a_month[player]) > 0
+                    ]
+                )
+                == 2
             )
 
-        return (
-            len(
-                [
-                    player
-                    for player in [0, 1]
-                    if len(four_of_a_month[player]) > 0
-                ]
-            )
-            == 2
+        return len(
+            [player for player in [0, 1] if len(four_of_a_month[player]) > 0]
+        ) == 2 or any(
+            len(temp_center_field.of_month(month)) == 4
+            for month in range(1, 13)
         )
 
     def _move_cards_at_beginning(
