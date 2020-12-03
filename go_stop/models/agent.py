@@ -83,6 +83,7 @@ class Agent(ABC):
                 try:
                     policy, value = net(encoded_game)
                     policy = policy.squeeze().masked_fill(mask, 0)
+                    print([(str(ALL_ACTIONS[i]), p) for i, p in enumerate(policy) if p != 0])
                     policy = policy / policy.sum()
                     policy = policy.numpy()
                     print([(str(ALL_ACTIONS[i]), p) for i, p in enumerate(policy) if p != 0])
