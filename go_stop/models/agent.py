@@ -85,6 +85,7 @@ class Agent(ABC):
                     policy = policy.squeeze().masked_fill(mask, 0)
                     policy = policy / policy.sum()
                     policy = policy.numpy()
+                    print([(str(ALL_ACTIONS[i]), p) for i, p in enumerate(policy)])
 
                     value = value.squeeze().item()
 
