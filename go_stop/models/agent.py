@@ -83,13 +83,15 @@ class Agent(ABC):
                 try:
                     policy, value = net(encoded_game)
                     policy = policy.squeeze().masked_fill(mask, 0)
+                    policy = policy / policy.sum()
                     policy = policy.numpy()
 
                     value = value.squeeze().item()
 
                     return policy, value
 
-                except:
+                except Exception as e:
+                    print("Exception:", e)
                     return None
 
         return None
