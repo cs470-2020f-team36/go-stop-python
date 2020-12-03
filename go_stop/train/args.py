@@ -25,6 +25,7 @@ args.nhid = 256
 args.nout = NUM_ACTIONS
 args.learning_rate = 0.5
 args.lr_decrease_rate = 0.9
+args.value_loss_penalty = 10
 
 # Hyperparameters for MCTS
 args.c_puct = 1
