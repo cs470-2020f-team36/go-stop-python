@@ -12,6 +12,7 @@ from flask import Flask, request
 from flask_socketio import SocketIO, emit
 
 from go_stop.models.action import Action
+from go_stop.models.game import Game
 from go_stop.service.ai import ai
 from go_stop.service.room_list import RoomList
 
@@ -35,7 +36,7 @@ def on_connect():
         "connect response",
         {
             "success": True,
-            "message": f"Hello, {request.sid}.",
+            "result": f"Hello, {request.sid}.",
         },
     )
 
@@ -223,8 +224,7 @@ def on_play(msg):
 
         if room.single_player:
             while (
-                game.state.player
-                == room.players.index(os.environ["AI_AGENT_ID"])
+                game.state.player == room.players.index(os.environ["AI_AGENT_ID"])
                 and not game.state.ended
             ):
                 result = room.serialize_game()
@@ -375,6 +375,45 @@ def on_spectate_game(msg):
             {
                 "success": False,
                 "error": "The room id field is empty.",
+                "errorCode": 1,
+            },
+        )
+
+
+@socketio.on("estimate game")
+def on_estimate_game(msg):
+    """When the client requested to estimate the policy and the value of a game."""
+    try:
+        if msg["game"] is None:
+            raise Exception
+
+        game = Game.deserialize(msg["game"])
+
+        estimation = ai.estimate(game)
+
+        if estimation is None:
+            raise Exception
+
+        policy, value = estimation
+        policy = [p.astype(float) for p in policy]
+
+        emit(
+            "estimate game response",
+            {
+                "success": True,
+                "result": {
+                    "policy": policy,
+                    "value": value,
+                },
+            },
+        )
+
+    except KeyError:
+        emit(
+            "estimate game response",
+            {
+                "success": False,
+                "error": "The request is invalid.",
                 "errorCode": 1,
             },
         )
