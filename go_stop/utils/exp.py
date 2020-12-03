@@ -1,10 +1,10 @@
-import torch
 from torch import Tensor
+
+
+BASE_EXP = 5
 
 def mean_exp(t: Tensor, exp: float) -> Tensor:
     assert exp > 0
-
-    BASE_EXP = 5
 
     t = t / t.sum()
 
@@ -12,14 +12,10 @@ def mean_exp(t: Tensor, exp: float) -> Tensor:
         t = t ** exp
         t = t / t.sum()
         exp -= BASE_EXP
-    
+
     if exp > 0:
         t = t ** exp
 
     t = t / t.sum()
 
     return t
-
-
-
-print(mean_exp(Tensor([1, 2, 3]), 1))
