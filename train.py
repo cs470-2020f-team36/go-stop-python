@@ -279,8 +279,6 @@ def search(
 
 def create_root_node(game: Game, net: EncoderNet):
     """Create the root node and store the prior into `P`."""
-    global P
-
     node = UCTNode(game)
     encoded_game = Tensor(node.encoded_game()).float().unsqueeze(0)
     net.eval()
@@ -321,9 +319,13 @@ def execute_episode(net: EncoderNet) -> Tensor:
         # of those sibling games.
         average = torch.zeros((0, DIM_ENCODED_GAME + NUM_ACTIONS + 1))
 
-        for node in similar_nodes:
+        for node in tqdm.tqdm(similar_nodes, desc="similar_nodes", leave=False):
             # Do the MCTS simulation with the neural network
-            for _ in range(args.mcts_search_per_simul):
+            for _ in tqdm.tqdm(
+                range(args.mcts_search_per_simul),
+                desc="mcts_search",
+                leave=False,
+            ):
                 search(node, net)
 
             # Generate a training datum
@@ -422,7 +424,7 @@ def evolve(net) -> Tuple[EncoderNet, bool]:
             loss.backward()
             optimizer.step()
 
-        tqdm.tqdm.write(f"Loss (episode {episode_count}): {total_loss}")
+        print(f"Loss (episode {episode_count}): {total_loss}")
 
     # Match the trained network with the previous one.
     prev_agent = Agent.from_net(prev_net)
@@ -507,7 +509,7 @@ def main():
             if evolution_count >= 10:
                 args.learning_rate *= args.lr_decrease_rate
 
-            tqdm.tqdm.write(f"[Evolution {evolution_count}]")
+            print(f"[Evolution {evolution_count}]")
 
             # Update the network
             net, is_evolved = evolve(net)
@@ -523,7 +525,7 @@ def main():
 
             # Record the match with a random agent.
             points = match_agents(Agent.from_net(net), Agent.random())
-            tqdm.tqdm.write(
+            print(
                 f"non-defeat rate: {len([x for x in points if x >= 0]) / len(points)},",
                 f"mean points: {np.mean(points)},",
                 f"std points: {np.std(points)}",
