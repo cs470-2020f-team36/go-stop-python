@@ -1,4 +1,15 @@
+"""
+setting.py
+
+Define some game settings.
+"""
+
+# pylint: disable=too-many-instance-attributes, too-few-public-methods
+
+
 class Setting:
+    """Go-Stop game settings."""
+
     def __init__(self):
         self.junk_card_from_ttadak = 1
         self.junk_card_from_discard_and_match = 1

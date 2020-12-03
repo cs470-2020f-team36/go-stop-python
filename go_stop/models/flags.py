@@ -17,17 +17,13 @@ class Flags:
         self.four_of_a_month = False
 
     def serialize(self) -> dict:
-        """
-        Serialize the flags.
-        """
+        """Serialize the flags."""
 
         return self.__dict__
 
     @staticmethod
     def deserialize(data: dict):
-        """
-        Deserialize the flags.
-        """
+        """Deserialize the flags."""
 
         flags = Flags()
         flags.__dict__ = data

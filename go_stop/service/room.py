@@ -54,9 +54,7 @@ class Room:
         # If the room is a single-player room and the first player is the AI agent,
         # let the AI play actions.
         if single_player:
-            while game.state.player == self.players.index(
-                os.environ["AI_AGENT_ID"]
-            ):
+            while game.state.player == self.players.index(os.environ["AI_AGENT_ID"]):
                 action = ai.query(game)
                 game.play(action)
 
@@ -77,9 +75,7 @@ class Room:
         """Serialize a room."""
         return {
             "id": self.uid,
-            "players": [
-                p for p in self.players if p != os.environ["AI_AGENT_ID"]
-            ],
+            "players": [p for p in self.players if p != os.environ["AI_AGENT_ID"]],
             "gameStarted": self.game is not None,
             "singlePlayer": self.single_player,
         }
@@ -92,9 +88,7 @@ class Room:
         result = self.game.serialize()
         result.update(
             {
-                "actions": [
-                    action.serialize() for action in self.game.actions()
-                ],
+                "actions": [action.serialize() for action in self.game.actions()],
                 "players": self.players,
             }
         )

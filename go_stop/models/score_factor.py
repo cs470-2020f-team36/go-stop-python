@@ -1,3 +1,10 @@
+"""
+score_factor.py
+
+Implement `ScoreFactor`.
+"""
+
+
 from typing import Any, Callable, Literal, Set
 
 from .setting import Setting
@@ -24,6 +31,8 @@ Kind = Literal[
 
 
 class ScoreFactor(Setting):
+    """Abstracts the factors which affect to the scoring."""
+
     kinds: Set[Kind] = {
         "bright",
         "animal",
@@ -56,6 +65,8 @@ class ScoreFactor(Setting):
 
     @property
     def score(self) -> Callable[[int], int]:
+        """Return the function representing the effect of the score factor to the score."""
+
         if self.kind == "bright":
             return lambda s: s + self.arg
 
@@ -94,6 +105,7 @@ class ScoreFactor(Setting):
         assert False
 
     def serialize(self) -> dict:
+        """Serialize the score factor."""
         return {
             "kind": self.kind,
             "arg": self.arg,
@@ -101,4 +113,5 @@ class ScoreFactor(Setting):
 
     @staticmethod
     def deserialize(data: dict):
+        """Deserialize the score factor."""
         return ScoreFactor(data["kind"], data["arg"])

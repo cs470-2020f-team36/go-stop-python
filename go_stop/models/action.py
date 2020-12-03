@@ -3,13 +3,13 @@ action.py
 
 Implement an action during a Go-Stop game.
 """
-
-
 from abc import ABC, abstractmethod
 from typing import Any, Literal
 
 from .card import Card
 from ..constants.card import go_stop_cards
+
+# pylint: disable=too-many-return-statements
 
 
 Kind = Literal[
@@ -37,18 +37,10 @@ class Action(ABC):
         self.arg = arg
 
     def __eq__(self, obj: object):
-        return (
-            isinstance(obj, Action)
-            and obj.kind == self.kind
-            and obj.arg == self.arg
-        )
+        return isinstance(obj, Action) and obj.kind == self.kind and obj.arg == self.arg
 
     def __str__(self):
-        return (
-            f"{self.kind} {str(self.arg)}"
-            if self.arg is not None
-            else self.kind
-        )
+        return f"{self.kind} {str(self.arg)}" if self.arg is not None else self.kind
 
     @abstractmethod
     def serialize(self) -> dict:
@@ -82,10 +74,8 @@ class Action(ABC):
         if data["kind"] == "move animal 9":
             return ActionMoveAnimal9(data["option"])
 
-        if data["kind"] == "go":
-            return ActionGo(data["option"])
-
-        assert False
+        assert data["kind"] == "go"
+        return ActionGo(data["option"])
 
 
 class ActionThrow(Action):
@@ -212,11 +202,7 @@ ALL_ACTIONS = [
     *[ActionBomb(month) for month in range(1, 13)],
     *[ActionShakable(card) for card in go_stop_cards if card.month is not None],
     *[ActionShaking(option) for option in {True, False}],
-    *[
-        ActionSelectMatch(match)
-        for match in go_stop_cards
-        if match.month is not None
-    ],
+    *[ActionSelectMatch(match) for match in go_stop_cards if match.month is not None],
     *[ActionFourOfAMonth(option) for option in {True, False}],
     *[ActionMoveAnimal9(option) for option in {True, False}],
     *[ActionGo(option) for option in {True, False}],

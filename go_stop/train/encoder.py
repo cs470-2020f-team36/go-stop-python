@@ -81,9 +81,7 @@ def hide_opponent_hand(game: Game, opponent: Player) -> List[Card]:
         if card.kind == "bomb"
         or card in flatten(game.state.shaking_histories[opponent])
     ]
-    return pad_to_length(
-        visible_cards, len_opponent_hand, SpecialCard("hidden")
-    )
+    return pad_to_length(visible_cards, len_opponent_hand, SpecialCard("hidden"))
 
 
 def encode_game(game: Game, player: Player) -> Tensor:
@@ -112,15 +110,11 @@ def encode_game(game: Game, player: Player) -> Tensor:
             encode_card_list(flatten(game.board.center_field.values())),
             # my go history
             Tensor(
-                pad_to_length(
-                    game.state.go_histories[player], length=9, padder=0
-                ),
+                pad_to_length(game.state.go_histories[player], length=9, padder=0),
             ),
             # opponent's go history
             Tensor(
-                pad_to_length(
-                    game.state.go_histories[opponent], length=9, padder=0
-                )
+                pad_to_length(game.state.go_histories[opponent], length=9, padder=0)
             ),
             # the number of my shakings
             Tensor([len(game.state.shaking_histories[player])]),
@@ -128,16 +122,12 @@ def encode_game(game: Game, player: Player) -> Tensor:
             Tensor([len(game.state.shaking_histories[opponent])]),
             # my stacking history; e.g., [1, 3] -> [1, 0, 1, 0, ...]
             cat_and_sum(
-                torch.eye(12)[
-                    [m - 1 for m in game.state.stacking_histories[player]]
-                ],
+                torch.eye(12)[[m - 1 for m in game.state.stacking_histories[player]]],
                 default=torch.zeros(12),
             ),
             # opponent's stacking history
             cat_and_sum(
-                torch.eye(12)[
-                    [m - 1 for m in game.state.stacking_histories[opponent]]
-                ],
+                torch.eye(12)[[m - 1 for m in game.state.stacking_histories[opponent]]],
                 default=torch.zeros(12),
             ),
             # my score

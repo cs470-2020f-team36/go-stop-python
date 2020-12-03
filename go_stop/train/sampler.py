@@ -14,9 +14,7 @@ from ..models.player import Player, get_opponent
 from ..utils.list import flatten
 
 
-def sample_from_observation(
-    game: Game, player: Player, sample_size: int
-) -> List[Game]:
+def sample_from_observation(game: Game, player: Player, sample_size: int) -> List[Game]:
     """
     Game sampler
 
