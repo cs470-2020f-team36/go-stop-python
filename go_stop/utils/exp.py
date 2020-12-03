@@ -9,7 +9,7 @@ def mean_exp(t: Tensor, exp: float) -> Tensor:
     t = t / t.sum()
 
     while exp >= BASE_EXP:
-        t = t ** exp
+        t = t ** BASE_EXP
         t = t / t.sum()
         exp -= BASE_EXP
 
