@@ -361,8 +361,15 @@ def execute_episode(net: EncoderNet) -> Tensor:
         # Take the best action we chose
         root_node = root_node.children[action_index]
         if root_node.game.state.ended:
-            # If the game of the root node terminated, return the training data
-            return training_data
+            # If the game of the root node terminated, exit the loop
+            break
+
+    # Fill the rewards into the training data
+    for datum_count in range(training_data.size(0)):
+        player = int(training_data[datum_count, -1].item())
+        training_data[datum_count, -1] = reward_wrt_player(root_node.game, player=player)
+
+    return training_data
 
 
 def evolve(net) -> Tuple[EncoderNet, bool]:
