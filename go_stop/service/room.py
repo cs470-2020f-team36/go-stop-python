@@ -104,10 +104,13 @@ class Room:
             set_estimate
             and self.single_player
             and not self.game.state.ended
-            and ai_index == self.game.state.player
         ):
             policy, value = ai.estimate(self.game)
-            result.update({"estimate": [[p.astype(float) for p in policy], value]})
+            if ai_index == self.game.state.player:
+                result.update({"estimate": [[p.astype(float) for p in policy], value]})
+            else:
+                result.update({"estimate": [[], value]})
+                
         else:
             result.update({"estimate": None})
 
