@@ -33,7 +33,7 @@ args.num_episodes_per_evolvution = 20
 args.max_evolution = 100
 
 # The size of a sample from the observation
-args.similar_games = lambda t: max(math.floor((6 * 2 ** ((20 - t) / 10))), 4)
+args.similar_games = lambda t: max(math.floor((8 * 2 ** ((20 - t) / 8))), 4)
 
 # Temperature parameter: tau = lambda t: 1 if t < args.tau_threshold else args.infinitesimal_tau
 args.tau_threshold = 10
