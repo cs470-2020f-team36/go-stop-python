@@ -378,6 +378,8 @@ def evolve(net) -> Tuple[EncoderNet, bool]:
     # Define the SGD optimizer
     optimizer = optim.SGD(net.parameters(), lr=args.learning_rate, momentum=0.9)
 
+    sum_of_losses = 0
+
     for episode_count in tqdm.tqdm(
         range(args.num_episodes_per_evolvution), desc="episodes"
     ):
@@ -419,6 +421,7 @@ def evolve(net) -> Tuple[EncoderNet, bool]:
             loss.backward()
             optimizer.step()
 
+        sum_of_losses += total_loss
         print(f"Loss (episode {episode_count}): {total_loss}")
 
     # Match the trained network with the previous one.
@@ -427,10 +430,10 @@ def evolve(net) -> Tuple[EncoderNet, bool]:
     points = match_agents(agent, prev_agent)
     if is_first_better(points):
         print("The new network won the previous one.")
-        return (net, True)
+        return (net, True, sum_of_losses)
 
     print("The previous network won the new one.")
-    return (prev_net, False)
+    return (prev_net, False, sum_of_losses)
 
 
 # random first player
@@ -503,11 +506,18 @@ def main():
             print(f"[Evolution {evolution_count}]")
 
             # Update the network
-            net, is_evolved = evolve(net)
+            net, is_evolved, loss = evolve(net)
 
             # If it is worse than the previous one, do nothing and try the evolution again.
             if not is_evolved:
                 continue
+
+            try:
+                env["loss"] = env["loss"]
+            except KeyError:
+                env["loss"] = {}
+
+            env["loss"][str(evolution_count)] = loss
 
             # Store the state dict of the best network.
             torch.save(net.state_dict(), ckpt_path)

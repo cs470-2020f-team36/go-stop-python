@@ -119,9 +119,9 @@ class AlphaLoss(nn.Module):
 
         print(
             "value loss:",
-            value_loss.sum().item(),
+            value_loss.mean().item(),
             "policy loss:",
-            policy_loss.sum().item(),
+            policy_loss.mean().item(),
         )
 
         return total_loss
