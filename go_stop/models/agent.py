@@ -53,6 +53,7 @@ class Agent(ABC):
             return action
 
         policy, _ = estimation
+        policy = mean_exp(policy, 1 / args.infinitesimal_tau)
         action = choice(ALL_ACTIONS, size=1, p=policy)[0]
 
         return action
@@ -79,7 +80,7 @@ class Agent(ABC):
 
                 policy, value = net(encoded_game)
                 policy = policy.squeeze().masked_fill(mask, 0)
-                policy = mean_exp(policy, 1 / args.infinitesimal_tau)
+                policy = policy / policy.sum()
                 policy = policy.numpy()
 
                 value = value.squeeze().item()
