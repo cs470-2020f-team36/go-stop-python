@@ -109,7 +109,7 @@ class UCTNode:
         Return the policy defined by the MCTS:
             \pi(a \mid s; \tau) \propto N(s, a)^{1 / \tau}
         """
-        n_tensor = Tensor([self.n(action)] for action in ALL_ACTIONS)
+        n_tensor = Tensor([self.n(action) for action in ALL_ACTIONS])
         policy = mean_exp(n_tensor, 1 / tau)
         return policy
 
