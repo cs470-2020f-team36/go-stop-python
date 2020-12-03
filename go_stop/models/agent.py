@@ -12,11 +12,12 @@ from numpy.random import choice
 import torch
 from torch import Tensor
 
-from .action import NUM_ACTIONS, all_actions
+from .action import NUM_ACTIONS, ALL_ACTIONS
 from .game import Game
 from ..train.args import args
 from ..train.encoder import encode_game
 from ..train.network import EncoderNet
+from ..utils.exp import mean_exp
 
 Kind = Literal["test", "random", "net"]
 
@@ -52,7 +53,7 @@ class Agent(ABC):
                 return action
 
             policy, _ = estimation
-            action = choice(all_actions, size=1, p=policy)[0]
+            action = choice(ALL_ACTIONS, size=1, p=policy)[0]
 
             return action
 
@@ -71,7 +72,7 @@ class Agent(ABC):
                 mask = (
                     Tensor(
                         [
-                            1 if all_actions[i] in game.actions() else 0
+                            1 if ALL_ACTIONS[i] in game.actions() else 0
                             for i in range(NUM_ACTIONS)
                         ],
                     )
@@ -81,9 +82,7 @@ class Agent(ABC):
                 try:
                     policy, value = net(encoded_game)
                     policy = policy.squeeze().masked_fill(mask, 0)
-                    policy = policy / policy.sum()
-                    policy = policy ** (1 / args.infinitesimal_tau)
-                    policy = policy / policy.sum()
+                    policy = mean_exp(policy, 1 / args.infinitesimal_tau)
                     policy = policy.numpy()
 
                     value = value.squeeze().item()

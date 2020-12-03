@@ -25,13 +25,14 @@ from go_stop.models.game import Game
 from go_stop.models.action import (
     Action,
     NUM_ACTIONS,
-    all_actions,
+    ALL_ACTIONS,
     get_action_index,
 )
 from go_stop.train.args import args
 from go_stop.train.encoder import DIM_ENCODED_GAME, encode_game
 from go_stop.train.network import AlphaLoss, EncoderNet
 from go_stop.train.sampler import sample_from_observation
+from go_stop.utils.exp import mean_exp
 
 
 torch.manual_seed(args.seed)
@@ -108,15 +109,8 @@ class UCTNode:
         Return the policy defined by the MCTS:
             \pi(a \mid s; \tau) \propto N(s, a)^{1 / \tau}
         """
-        policy = Tensor(
-            [
-                (self._n[i] / sum(self._n.values())) ** (1 / tau)
-                if i in self._n
-                else 0
-                for i in range(NUM_ACTIONS)
-            ]
-        )
-        policy = policy / torch.sum(policy)
+        n_tensor = Tensor([self.n(action)] for action in ALL_ACTIONS)
+        policy = mean_exp(n_tensor, 1 / tau)
         return policy
 
     def policy_with_noise(self, tau: float = 1) -> Tensor:
@@ -136,7 +130,7 @@ class UCTNode:
         mask = (
             Tensor(
                 [
-                    1 if all_actions[i] in self.game.actions() else 0
+                    1 if ALL_ACTIONS[i] in self.game.actions() else 0
                     for i in range(NUM_ACTIONS)
                 ],
             )
@@ -362,7 +356,7 @@ def execute_episode(net: EncoderNet) -> Tensor:
         )
         # The following will ensure that `action_index` have been visited at least once
         while action_index not in root_node.children:
-            search(root_node, net, all_actions[action_index])
+            search(root_node, net, ALL_ACTIONS[action_index])
 
         # Take the best action we chose
         root_node = root_node.children[action_index]

@@ -206,7 +206,7 @@ class ActionGo(Action):
         return {"kind": self.kind, "option": self.option}
 
 
-all_actions = [
+ALL_ACTIONS = [
     *[ActionThrow(card) for card in go_stop_cards],
     ActionThrowBomb(),
     *[ActionBomb(month) for month in range(1, 13)],
@@ -226,7 +226,7 @@ all_actions = [
 def get_action_index(action: Action) -> int:
     """Return the index of an action"""
 
-    return all_actions.index(action)
+    return ALL_ACTIONS.index(action)
 
 
-NUM_ACTIONS = len(all_actions)
+NUM_ACTIONS = len(ALL_ACTIONS)

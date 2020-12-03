@@ -37,7 +37,7 @@ args.similar_games = lambda t: max(math.floor((6 * 2 ** ((20 - t) / 10))), 4)
 
 # Temperature parameter: tau = lambda t: 1 if t < args.tau_threshold else args.infinitesimal_tau
 args.tau_threshold = 10
-args.infinitesimal_tau = 0.03
+args.infinitesimal_tau = 0.01
 
 # Parameters of Dirichlet noises during MCTS
 args.epsilon = 0.25
