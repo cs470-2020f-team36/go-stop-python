@@ -1,21 +1,34 @@
+"""
+exp.py
+
+Define `mean_exp` method.
+"""
+
+
 from torch import Tensor
 
 
 BASE_EXP = 5
 
-def mean_exp(t: Tensor, exp: float) -> Tensor:
+
+def mean_exp(tensor: Tensor, exp: float) -> Tensor:
+    """
+    Return `(tensor ** exp) / (tensor ** exp).sum()` correctly,
+    especially when exp is a large positive number.
+    """
+
     assert exp > 0
 
-    t = t / t.sum()
+    tensor = tensor / tensor.sum()
 
     while exp >= BASE_EXP:
-        t = t ** BASE_EXP
-        t = t / t.sum()
+        tensor = tensor ** BASE_EXP
+        tensor = tensor / tensor.sum()
         exp -= BASE_EXP
 
     if exp > 0:
-        t = t ** exp
+        tensor = tensor ** exp
 
-    t = t / t.sum()
+    tensor = tensor / tensor.sum()
 
-    return t
+    return tensor

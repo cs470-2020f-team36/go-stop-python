@@ -7,6 +7,8 @@ Implement a logger of a game.
 
 from typing import Any, Literal
 
+# pylint: disable=too-many-return-statements, too-many-branches, too-few-public-methods
+
 
 Kind = Literal[
     "turn change",  # arg: (int, int)
@@ -51,9 +53,7 @@ class LoggerItem:
         if self.kind == "shaking":
             return "SHAKING: {}".format(self.arg)
         if self.kind == "append to hand":
-            return "APPEND TO P{}'s HAND: {}".format(
-                self.arg[0], str(self.arg[1])
-            )
+            return "APPEND TO P{}'s HAND: {}".format(self.arg[0], str(self.arg[1]))
         if self.kind == "append to center field":
             return "APPEND TO CENTER FIELD: {}".format(str(self.arg))
         if self.kind == "append to capture field":
@@ -71,9 +71,7 @@ class LoggerItem:
         if self.kind == "select match":
             return "SELECT MATCH: {} with {}".format(self.arg[0], self.arg[1])
         if self.kind == "discard and match":
-            return "DISCARD-AND-MATCH: {} with {}".format(
-                self.arg[0], self.arg[1]
-            )
+            return "DISCARD-AND-MATCH: {} with {}".format(self.arg[0], self.arg[1])
         if self.kind == "stacking":
             return "STACKING: {}".format(self.arg)
         if self.kind == "ttadak":
@@ -84,8 +82,8 @@ class LoggerItem:
             return "CLEAR"
         if self.kind == "go":
             return "GO" if self.arg else "STOP"
-        if self.kind == "four of a month":
-            return "FOUR OF A MONTH: {}".format(str(self.arg))
+        assert self.kind == "four of a month"
+        return "FOUR OF A MONTH: {}".format(str(self.arg))
 
 
 class Logger:
@@ -104,4 +102,5 @@ class Logger:
 
     def serialize(self):
         """Serialize the logger"""
+        # todo: replace `str` by making items into `json`s
         return [str(item) for item in self.logs]

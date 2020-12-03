@@ -31,13 +31,12 @@ class Agent(ABC):
     net: agent from the neural network
     """
 
-    def __init__(self, kind, net: Optional[EncoderNet] = None):
-        # Game -> Action
+    def __init__(self, kind: Kind, net: Optional[EncoderNet] = None):
         self.kind = kind
         self.net = net
 
     def query(self, game: Game):
-        """Query an action to the agent with given game"""
+        """Query an action to the agent with given game."""
 
         if self.kind == "test":
             return game.actions()[int(input())]
@@ -45,21 +44,21 @@ class Agent(ABC):
         if self.kind == "random":
             return random.choice(game.actions())
 
-        if self.kind == "net":
-            estimation = self.estimate(game)
+        assert self.kind == "net"
 
-            if estimation is None:
-                action = random.choice(game.actions())
-                return action
+        estimation = self.estimate(game)
 
-            policy, _ = estimation
-            policy = mean_exp(policy, 1 / args.infinitesimal_tau)
-            action = choice(ALL_ACTIONS, size=1, p=policy)[0]
-
+        if estimation is None:
+            action = random.choice(game.actions())
             return action
 
+        policy, _ = estimation
+        action = choice(ALL_ACTIONS, size=1, p=policy)[0]
+
+        return action
+
     def estimate(self, game: Game):
-        """Query an action to the agent with given game"""
+        """Return an estimate of the policy and the expected value given a state."""
         if game.actions() == []:
             return None
 
@@ -67,9 +66,7 @@ class Agent(ABC):
             net = self.net
             net.eval()
             with torch.no_grad():
-                encoded_game = (
-                    encode_game(game, game.state.player).unsqueeze(0).float()
-                )
+                encoded_game = encode_game(game, game.state.player).unsqueeze(0).float()
                 mask = (
                     Tensor(
                         [
@@ -80,21 +77,14 @@ class Agent(ABC):
                     == 0
                 )
 
-                try:
-                    policy, value = net(encoded_game)
-                    policy = policy.squeeze().masked_fill(mask, 0)
-                    print([(str(ALL_ACTIONS[i]), p) for i, p in enumerate(policy) if p != 0])
-                    policy = policy / policy.sum()
-                    policy = policy.numpy()
-                    print([(str(ALL_ACTIONS[i]), p) for i, p in enumerate(policy) if p != 0])
+                policy, value = net(encoded_game)
+                policy = policy.squeeze().masked_fill(mask, 0)
+                policy = mean_exp(policy, 1 / args.infinitesimal_tau)
+                policy = policy.numpy()
 
-                    value = value.squeeze().item()
+                value = value.squeeze().item()
 
-                    return policy, value
-
-                except Exception as e:
-                    print("Exception:", e)
-                    return None
+                return policy, value
 
         return None
 

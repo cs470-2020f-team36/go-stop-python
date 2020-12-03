@@ -1,15 +1,19 @@
-from typing import Literal
+"""
+scorer.py
+
+Define a function calculating the score from the list of score factors.
+"""
 
 from .player import Player
 from .state import State
 
 
-class Scorer:
-    @staticmethod
-    def calculate(state: State, player: Player) -> int:
-        result = 0
+def calculate_score(state: State, player: Player) -> int:
+    """Calculates the score from the list of score factors."""
 
-        for factor in state.score_factors[player]:
-            result = factor.score(result)
+    result = 0
 
-        return result
+    for factor in state.score_factors[player]:
+        result = factor.score(result)
+
+    return result

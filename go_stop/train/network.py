@@ -112,9 +112,16 @@ class AlphaLoss(nn.Module):
         )
 
         # value_loss(s) = (v_{pred}(s) − v_{target}(s))^2
-        value_loss = ((value_target - value_pred) ** 2).view(-1).float() * 10
+        value_loss = ((value_target - value_pred) ** 2).view(-1).float()
 
         # loss(s) = policy_loss(s) + value_loss(s)
         total_loss = (policy_loss + value_loss).mean()
+
+        print(
+            "value loss:",
+            value_loss.sum().item(),
+            "policy loss:",
+            policy_loss.sum().item(),
+        )
 
         return total_loss

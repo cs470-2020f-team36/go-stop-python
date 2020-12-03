@@ -40,7 +40,7 @@ torch.manual_seed(args.seed)
 
 def reward(point: int) -> float:
     """Define a reward given the actual score got from the game."""
-    # todo
+    # todo: implement `reward` function w.r.t. the evaluation weights.
     return point
 
 
@@ -122,9 +122,7 @@ class UCTNode:
         """
         policy = self.policy(tau)
         dirichlet_noise = torch.from_numpy(
-            np.random.dirichlet(
-                np.zeros([NUM_ACTIONS], dtype=np.float32) + args.alpha
-            )
+            np.random.dirichlet(np.zeros([NUM_ACTIONS], dtype=np.float32) + args.alpha)
         )
         policy = (1 - args.epsilon) * policy + args.epsilon * dirichlet_noise
         mask = (
@@ -178,9 +176,7 @@ class UCTNode:
         return r
 
 
-def search(
-    node: UCTNode, net: EncoderNet, action: Optional[Action] = None
-) -> float:
+def search(node: UCTNode, net: EncoderNet, action: Optional[Action] = None) -> float:
     """
     Search through the tree,
     and return the expected reward for the current player of the parent node.
@@ -248,9 +244,7 @@ def search(
                 value = float(value)
 
                 # and store the predicted prior into `P`
-                encoded_game_tuple = tuple(
-                    encoded_game.squeeze().int().tolist()
-                )
+                encoded_game_tuple = tuple(encoded_game.squeeze().int().tolist())
                 P[encoded_game_tuple] = policy.squeeze()
                 if next_game.state.player != node.game.state.player:
                     value *= -1
@@ -323,9 +317,7 @@ def execute_episode(net: EncoderNet) -> Tensor:
                 search(node, net)
 
             # Generate a training datum
-            tau = (
-                1 if turn_count < args.tau_threshold else args.infinitesimal_tau
-            )
+            tau = 1 if turn_count < args.tau_threshold else args.infinitesimal_tau
             training_datum = torch.cat(
                 (
                     Tensor(node.encoded_game()),
@@ -361,8 +353,17 @@ def execute_episode(net: EncoderNet) -> Tensor:
         # Take the best action we chose
         root_node = root_node.children[action_index]
         if root_node.game.state.ended:
-            # If the game of the root node terminated, return the training data
-            return training_data
+            # If the game of the root node terminated, exit the loop
+            break
+
+    # Fill the rewards into the training data
+    for datum_count in range(training_data.size(0)):
+        player = int(training_data[datum_count, -1].item())
+        training_data[datum_count, -1] = reward_wrt_player(
+            root_node.game, player=player
+        )
+
+    return training_data
 
 
 def evolve(net) -> Tuple[EncoderNet, bool]:
@@ -444,9 +445,7 @@ def match_agents(
         agents = [agent_a, agent_b]
 
         # play `num_random_games` games
-        for _ in tqdm.tqdm(
-            range(num_random_games), desc="match_agents", leave=False
-        ):
+        for _ in tqdm.tqdm(range(num_random_games), desc="match_agents", leave=False):
             game = Game(starting_player=random.randint(0, 1))
 
             while not game.state.ended:
@@ -492,9 +491,7 @@ def main():
         with open(env_path, "w") as env_file:
             json.dump(env, env_file)
 
-    for evolution_count in tqdm.tqdm(
-        range(args.max_evolution), desc="evolution"
-    ):
+    for evolution_count in tqdm.tqdm(range(args.max_evolution), desc="evolution"):
         if evolution_count >= env["version"]:
             # Initialize `P`
             P = {}
@@ -531,8 +528,7 @@ def main():
                 env["evaluations"] = {"mcts vs random": {}}
 
             env["evaluations"]["mcts vs random"][str(evolution_count)] = {
-                "non_defeat_rate": len([x for x in points if x >= 0])
-                / len(points),
+                "non_defeat_rate": len([x for x in points if x >= 0]) / len(points),
                 "win_rate": len([x for x in points if x > 0]) / len(points),
                 "mean": np.mean(points),
                 "std": np.std(points),

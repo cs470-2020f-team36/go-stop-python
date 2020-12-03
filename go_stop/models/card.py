@@ -38,6 +38,7 @@ class Card(ABC):
     def _to_level(self) -> int:
         """
         A private method used to sort cards.
+        Card with large level values will be placed at the last in a list.
         """
 
         kind_to_level = {
