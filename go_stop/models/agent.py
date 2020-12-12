@@ -90,6 +90,8 @@ class Agent(ABC):
                     # Perform a random action when every action has estimated probability 0
                     policy = torch.ones((NUM_ACTIONS,)).masked_fill(mask, 0)
                     policy = policy / policy.sum()
+                else:
+                    policy = policy / policy.sum()
 
                 policy = policy.numpy()
 
