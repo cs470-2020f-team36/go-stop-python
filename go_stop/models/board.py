@@ -58,7 +58,7 @@ class Board(Setting):
             (month, temp_center_field.of_month(month)) for month in range(1, 13)
         )
 
-        # Sort hands and the center field.
+        # Sort hands.
         self.sort()
 
     def _is_reset_necessary(self, temp_center_field: CardList) -> bool:
@@ -149,12 +149,9 @@ class Board(Setting):
         return four_of_a_month
 
     def sort(self) -> None:
-        """Sort hands of players and the center field."""
+        """Sort hands of players."""
         for player in [0, 1]:
             self.hands[player].sort()
-
-        for month in range(1, 13):
-            self.center_field[month].sort()
 
     def serialize(self) -> dict:
         """Serialize the board."""
