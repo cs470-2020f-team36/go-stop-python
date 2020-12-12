@@ -4,7 +4,7 @@ action.py
 Implement an action during a Go-Stop game.
 """
 from abc import ABC, abstractmethod
-from typing import Any, Literal
+from typing import Any, List, Literal
 
 from .card import Card
 from ..constants.card import go_stop_cards
@@ -196,7 +196,7 @@ class ActionGo(Action):
         return {"kind": self.kind, "option": self.option}
 
 
-ALL_ACTIONS = [
+ALL_ACTIONS: List[Action] = [
     *[ActionThrow(card) for card in go_stop_cards],
     ActionThrowBomb(),
     *[ActionBomb(month) for month in range(1, 13)],

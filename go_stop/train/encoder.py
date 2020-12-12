@@ -88,7 +88,7 @@ def encode_game(game: Game, player: Player) -> Tensor:
     """
     Game encoder
 
-    Encode the game state into a tensor of shape (307,).
+    Encode the game state into a tensor of shape (LEN_EXTENDED_CARDS,).
     To see which information is encoded, see the return statement of this method.
     """
 
@@ -96,8 +96,6 @@ def encode_game(game: Game, player: Player) -> Tensor:
 
     return torch.cat(
         (
-            # current player
-            Tensor([game.state.player]),
             # my hand
             encode_card_list(game.board.hands[player]),
             # opponent's hand
