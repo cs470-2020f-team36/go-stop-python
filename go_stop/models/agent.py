@@ -83,6 +83,12 @@ class Agent(ABC):
 
                 policy_, value = net(encoded_game)
                 policy = policy_.squeeze().masked_fill(mask, 0)
+
+                if policy.sum().item() == 0:
+                    # Perform a random action when every action has estimated probability 0
+                    policy = torch.ones((NUM_ACTIONS,)).masked_fill(mask, 0)
+                    policy = policy / policy.sum()
+
                 policy = policy.numpy()
 
                 value = value.squeeze().item()
