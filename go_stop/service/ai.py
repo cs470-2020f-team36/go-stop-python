@@ -12,7 +12,7 @@ from ..train.network import EncoderNet
 
 
 net: EncoderNet = EncoderNet()
-ckpt_path = args.root_dir / "best.pt"
+ckpt_path = args.root_dir / f"best_{args.num_hidden_layers}_hidden_layers.pt"
 
 if ckpt_path.is_file():
     net.load_state_dict(torch.load(ckpt_path))

@@ -5,10 +5,11 @@ Define `mean_exp` method.
 """
 
 
+import torch
 from torch import Tensor
 
 
-BASE_EXP = 5
+BASE_EXP = 3
 
 
 def mean_exp(tensor: Tensor, exp: float) -> Tensor:
@@ -18,6 +19,9 @@ def mean_exp(tensor: Tensor, exp: float) -> Tensor:
     """
 
     assert exp > 0
+
+    # To avoid NaN when tensor.sum() is zero
+    tensor = tensor + torch.ones(tensor.shape) * 1e-8
 
     tensor = tensor / tensor.sum()
 

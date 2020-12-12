@@ -10,6 +10,7 @@ which is difficult to accelerate using GPU.
 from __future__ import annotations
 import json
 import math
+import pickle
 import random
 from typing import Dict, List, Optional, Tuple
 
@@ -30,31 +31,14 @@ from go_stop.models.action import (
 )
 from go_stop.train.args import args
 from go_stop.train.encoder import DIM_ENCODED_GAME, encode_game
+from go_stop.train.match import match_agents, is_first_better
 from go_stop.train.network import AlphaLoss, EncoderNet
+from go_stop.train.reward import reward_wrt_player
 from go_stop.train.sampler import sample_from_observation
 from go_stop.utils.exp import mean_exp
 
 
 torch.manual_seed(args.seed)
-
-
-def reward(point: int) -> float:
-    """Define a reward given the actual score got from the game."""
-    # todo: implement `reward` function w.r.t. the evaluation weights.
-    return point
-
-
-def reward_wrt_player(game: Game, player: int, reward_func=reward):
-    """Return the reward w.r.t. given player and given reward function."""
-
-    if game.state.winner is None:
-        return reward_func(0)
-
-    point = game.state.scores[game.state.winner]
-    if player != game.state.winner:
-        point *= -1
-
-    return reward_func(point)
 
 
 # `P` is a dict used to store the prior probability of nodes.
@@ -283,17 +267,17 @@ def execute_episode(net: EncoderNet) -> Tensor:
     until the game of the root node is terminated.
     """
 
-    training_data = torch.zeros((0, DIM_ENCODED_GAME + NUM_ACTIONS + 1))
+    training_data = torch.zeros((0, DIM_ENCODED_GAME + NUM_ACTIONS + 2))
     root_node = create_root_node(Game(), net)
 
     turn_count = 0
     while True:
-        # Take a sample of size `args.similar_games(turn_count)`
+        # Take a sample of size `args.num_similar_games(turn_count)`
         # consisting of games with the same observable information.
         similar_games = sample_from_observation(
             root_node.game,
             root_node.game.state.player,
-            sample_size=args.similar_games(turn_count),
+            sample_size=args.num_similar_games(turn_count),
         )
 
         # Create the corresponding nodes.
@@ -305,7 +289,7 @@ def execute_episode(net: EncoderNet) -> Tensor:
 
         # We will take the average over the priors and the expected values
         # of those sibling games.
-        average = torch.zeros((0, DIM_ENCODED_GAME + NUM_ACTIONS + 1))
+        average = torch.zeros((0, DIM_ENCODED_GAME + NUM_ACTIONS + 2))
 
         for node in tqdm.tqdm(similar_nodes, desc="similar_nodes", leave=False):
             # Do the MCTS simulation with the neural network
@@ -317,11 +301,24 @@ def execute_episode(net: EncoderNet) -> Tensor:
                 search(node, net)
 
             # Generate a training datum
-            tau = 1 if turn_count < args.tau_threshold else args.infinitesimal_tau
+            num_of_cards_in_hand = len(node.game.board.hands[0]) + len(
+                node.game.board.hands[1]
+            )
+            tau = (
+                1
+                if num_of_cards_in_hand < args.tau_threshold
+                else args.infinitesimal_tau
+            )
+            action_index = np.random.choice(
+                range(NUM_ACTIONS),
+                p=node.policy(tau=args.infinitesimal_tau).clone().numpy(),
+            )
+            action = ALL_ACTIONS[action_index]
             training_datum = torch.cat(
                 (
                     Tensor(node.encoded_game()),
                     node.policy(tau),
+                    Tensor([node.q(action)]),
                     Tensor([node.game.state.player]),
                 )
             ).unsqueeze(0)
@@ -359,39 +356,66 @@ def execute_episode(net: EncoderNet) -> Tensor:
     # Fill the rewards into the training data
     for datum_count in range(training_data.size(0)):
         player = int(training_data[datum_count, -1].item())
-        training_data[datum_count, -1] = reward_wrt_player(
-            root_node.game, player=player
+        avg_score = training_data[datum_count, -2].item()
+        training_data[datum_count, -2] = (
+            args.mcts_reward_weight * reward_wrt_player(root_node.game, player=player)
+            + (1 - args.mcts_reward_weight) * avg_score
         )
 
-    return training_data
+    return training_data[:, :-1]
 
 
-def evolve(net) -> Tuple[EncoderNet, bool]:
+def evolve(net, evolution_count: int) -> Tuple[EncoderNet, float]:
     """
     Make the neural network evolve
     by executing the MCTS and training with the data provided by it.
     """
 
-    prev_net = copy.deepcopy(net)
     net.train()
 
-    # Define the SGD optimizer
-    optimizer = optim.SGD(net.parameters(), lr=args.learning_rate, momentum=0.9)
+    # Define the optimizer
+    optimizer = optim.SGD(
+        net.parameters(),
+        lr=args.learning_rate * (args.lr_decrease_rate ** evolution_count),
+    )
 
-    sum_of_losses = 0
+    try:
+        with open(
+            args.root_dir
+            / f"training_data_{args.num_hidden_layers}_hidden_layers.pickle",
+            "rb",
+        ) as f:
+            examples = pickle.load(f)
+            print(examples.shape)
+    except:
+        print("NO SAVED EXAMPLES")
+        examples = torch.zeros((0, DIM_ENCODED_GAME + NUM_ACTIONS + 1))
 
     for episode_count in tqdm.tqdm(
         range(args.num_episodes_per_evolvution), desc="episodes"
     ):
         # Gather the training data
-        examples = execute_episode(net)
+        training_data = execute_episode(net)
+        examples = torch.cat((examples, training_data))
+
+        with open(
+            args.root_dir
+            / f"training_data_{args.num_hidden_layers}_hidden_layers.pickle",
+            "wb",
+        ) as f:
+            pickle.dump(examples, f)
+
+        trimmed_examples = examples[-args.replay_buffer_size(evolution_count) :]
 
         # Permute it randomly
-        examples = examples[torch.randperm(examples.size(0))]
+        trimmed_examples = trimmed_examples[torch.randperm(trimmed_examples.size(0))]
 
         # Split it into minibatches
-        minibatches = torch.split(examples, args.batch_size)
-        total_loss = 0
+        minibatches = torch.split(trimmed_examples, args.batch_size)
+
+        total_policy_loss = 0
+        total_value_loss = 0
+
         for batch in minibatches:
             # If the batch size is (unfortunately) 1, ignore it.
             if batch.size(0) == 1:
@@ -411,8 +435,9 @@ def evolve(net) -> Tuple[EncoderNet, bool]:
 
             # Do the backpropagation.
             criterion = AlphaLoss()
-            loss = criterion(y_pred, y_target)
-            total_loss += loss.item()
+            loss, policy_loss, value_loss = criterion(y_pred, y_target)
+            total_policy_loss += policy_loss
+            total_value_loss += value_loss
             if loss.isnan():
                 print(y_target, y_pred)
                 raise Exception
@@ -421,54 +446,13 @@ def evolve(net) -> Tuple[EncoderNet, bool]:
             loss.backward()
             optimizer.step()
 
-        sum_of_losses += total_loss
-        print(f"Loss (episode {episode_count}): {total_loss}")
+        total_policy_loss /= len(minibatches)
+        total_value_loss /= len(minibatches)
+        total_loss = total_policy_loss + total_value_loss
 
-    # Match the trained network with the previous one.
-    prev_agent = Agent.from_net(prev_net)
-    agent = Agent.from_net(net)
-    points = match_agents(agent, prev_agent)
-    if is_first_better(points):
-        print("The new network won the previous one.")
-        return (net, True, sum_of_losses)
+        print(f"Average loss: {total_loss}")
 
-    print("The previous network won the new one.")
-    return (prev_net, False, sum_of_losses)
-
-
-# random first player
-def match_agents(
-    agent_a: Agent, agent_b: Agent, num_random_games: int = 3000
-) -> List[float]:
-    """Match two agents each other by plaing `num_random_games` games."""
-
-    with torch.no_grad():
-        # The array of scores for the agent A.
-        scores = []
-        agents = [agent_a, agent_b]
-
-        # play `num_random_games` games
-        for _ in tqdm.tqdm(range(num_random_games), desc="match_agents", leave=False):
-            game = Game(starting_player=random.randint(0, 1))
-
-            while not game.state.ended:
-                action = agents[game.state.player].query(game)
-                game.play(action)
-
-            scores.append(reward_wrt_player(game, 0, lambda p: p))
-
-        return scores
-
-
-def is_first_better(points: List[float]) -> bool:
-    """Get the list of points and return whether the first agent is better."""
-
-    sample_mean = np.mean(points)
-
-    if sample_mean > 0:
-        return True
-
-    return False
+    return (net, total_loss, total_policy_loss, total_value_loss)
 
 
 def main():
@@ -480,12 +464,12 @@ def main():
     net = EncoderNet()
 
     # Load state dict if exists
-    ckpt_path = args.root_dir / "best.pt"
+    ckpt_path = args.root_dir / f"best_{args.num_hidden_layers}_hidden_layers.pt"
     if ckpt_path.is_file():
         net.load_state_dict(torch.load(ckpt_path))
 
     # Load env
-    env_path = args.root_dir / "env.json"
+    env_path = args.root_dir / f"env_{args.num_hidden_layers}_hidden_layers.json"
     if env_path.is_file():
         with open(env_path, "r") as env_file:
             env = json.load(env_file)
@@ -494,43 +478,56 @@ def main():
         with open(env_path, "w") as env_file:
             json.dump(env, env_file)
 
+    best_net = copy.deepcopy(net)
+
     for evolution_count in tqdm.tqdm(range(args.max_evolution), desc="evolution"):
         if evolution_count >= env["version"]:
             # Initialize `P`
             P = {}
 
-            # Control the learning rate
-            if evolution_count >= 10:
-                args.learning_rate *= args.lr_decrease_rate
-
             print(f"[Evolution {evolution_count}]")
 
             # Update the network
-            net, is_evolved, loss = evolve(net)
+            net, loss, policy_loss, value_loss = evolve(net, evolution_count)
 
-            # If it is worse than the previous one, do nothing and try the evolution again.
-            if not is_evolved:
-                continue
+            # Match the trained network with the previous one.
+            prev_agent = Agent.from_net(best_net)
+            agent = Agent.from_net(net)
+            points = match_agents(agent, prev_agent)
+            is_evolved = is_first_better(points)
+
+            # Load state dict if exists
+            torch.save(
+                net.state_dict(),
+                args.root_dir / f"now_{args.num_hidden_layers}_hidden_layers.pt",
+            )
+
+            if is_evolved:
+                print("The new network won the previous best one.")
+                torch.save(
+                    net.state_dict(),
+                    args.root_dir / f"best_{args.num_hidden_layers}_hidden_layers.pt",
+                )
+                best_net = net
+            else:
+                print("The previous best network won the new one.")
+                net = best_net
 
             try:
                 env["loss"] = env["loss"]
             except KeyError:
                 env["loss"] = {}
 
-            env["loss"][str(evolution_count)] = loss
-
-            # Store the state dict of the best network.
-            torch.save(net.state_dict(), ckpt_path)
+            env["loss"][str(evolution_count)] = {
+                "loss": loss,
+                "policy": policy_loss,
+                "value": value_loss,
+            }
 
             env["version"] += 1
 
             # Record the match with a random agent.
             points = match_agents(Agent.from_net(net), Agent.random())
-            print(
-                f"non-defeat rate: {len([x for x in points if x >= 0]) / len(points)},",
-                f"mean points: {np.mean(points)},",
-                f"std points: {np.std(points)}",
-            )
 
             try:
                 env["evaluations"] = env["evaluations"]

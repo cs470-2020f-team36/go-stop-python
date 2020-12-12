@@ -23,15 +23,15 @@ class MLPBlock(nn.Module):
     def __init__(self, in_channels: int, out_channels: int):
         super().__init__()
         self.fc = nn.Linear(in_channels, out_channels)
-        self.bn = nn.BatchNorm1d(out_channels)
-        self.act = nn.ReLU()
+        self.act = nn.LeakyReLU()
+        self.dropout = nn.Dropout()
 
     def forward(self, x: Tensor):
         """Forward the input into the output."""
 
         x = self.fc(x)
-        x = self.bn(x)
         x = self.act(x)
+        x = self.dropout(x)
         return x
 
 
@@ -47,13 +47,13 @@ class OutBlock(nn.Module):
         super().__init__()
 
         self.p_fc1 = MLPBlock(in_channels, args.nhid)
-        self.p_fc2 = MLPBlock(args.nhid, args.nout)
+        self.p_fc2 = nn.Linear(args.nhid, args.nout)
 
         self.v_fc1 = MLPBlock(in_channels, args.nhid)
-        self.v_fc2 = MLPBlock(args.nhid, 1)
-        self.v_fc3 = MLPBlock(args.nhid, 1)
+        self.v_fc2 = nn.Linear(args.nhid, 1)
+        self.v_fc3 = nn.Linear(args.nhid, 1)
 
-        self.log_softmax = nn.LogSoftmax(dim=1)
+        self.log_softmax = nn.LogSoftmax(dim=-1)
 
     def forward(self, x: Tensor):
         """Forward the input into the output."""
@@ -73,12 +73,12 @@ class OutBlock(nn.Module):
 class EncoderNet(nn.Module):
     """The whole network"""
 
-    def __init__(self):
+    def __init__(self, num_hidden_layers=args.num_hidden_layers):
         super().__init__()
 
         self.fc = MLPBlock(args.ninp, args.nhid)
         self.layers = torch.nn.Sequential(
-            *[MLPBlock(args.nhid, args.nhid) for _ in range(6)]
+            *[MLPBlock(args.nhid, args.nhid) for _ in range(num_hidden_layers)]
         )
         self.out = OutBlock(args.nhid)
 
@@ -109,10 +109,10 @@ class AlphaLoss(nn.Module):
         policy_loss = torch.sum(
             (-policy_target * (1e-8 + policy_pred.float()).float().log()),
             dim=1,
-        )
+        ) * 10
 
         # value_loss(s) = (v_{pred}(s) − v_{target}(s))^2
-        value_loss = ((value_target - value_pred) ** 2).view(-1).float() / args.value_loss_penalty
+        value_loss = ((value_target - value_pred) ** 2).view(-1).float()
 
         # loss(s) = policy_loss(s) + value_loss(s)
         total_loss = (policy_loss + value_loss).mean()
@@ -124,4 +124,4 @@ class AlphaLoss(nn.Module):
             policy_loss.mean().item(),
         )
 
-        return total_loss
+        return total_loss, policy_loss.mean().item(), value_loss.mean().item()

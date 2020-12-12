@@ -53,8 +53,11 @@ class Agent(ABC):
             return action
 
         policy, _ = estimation
-        policy = mean_exp(policy, 1 / args.infinitesimal_tau)
-        action = choice(ALL_ACTIONS, size=1, p=policy)[0]
+        policy = mean_exp(torch.from_numpy(policy), 1 / args.infinitesimal_tau).numpy()
+        try:
+            action = choice(ALL_ACTIONS, size=1, p=policy)[0]
+        except ValueError:
+            action = random.choice(game.actions())
 
         return action
 
@@ -78,9 +81,8 @@ class Agent(ABC):
                     == 0
                 )
 
-                policy, value = net(encoded_game)
-                policy = policy.squeeze().masked_fill(mask, 0)
-                policy = policy / policy.sum()
+                policy_, value = net(encoded_game)
+                policy = policy_.squeeze().masked_fill(mask, 0)
                 policy = policy.numpy()
 
                 value = value.squeeze().item()
