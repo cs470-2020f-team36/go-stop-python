@@ -31,7 +31,7 @@ args.lr_decrease_rate = 0.96
 args.num_hidden_layers = 6
 
 # Hyperparameters for MCTS
-args.c_puct = 1
+args.c_puct = 4
 args.mcts_search_per_simul = 50
 args.num_episodes_per_evolvution = 35
 args.max_evolution = 1000
@@ -39,11 +39,11 @@ args.mcts_reward_weight = 0.7
 args.replay_buffer_size = lambda c: 500 + c * 400
 
 # The size of a sample from the observation
-args.num_similar_games = lambda t: max(math.floor(1.5 * (2 ** ((20 - t) / 8))), 3)
+args.num_similar_games = lambda t: max(math.floor(4 * (2 ** ((20 - t) / 7))), 3)
 args.num_evaluation_games = 5000
 
 # Temperature parameter: tau = lambda t: 1 if t < args.tau_threshold else args.infinitesimal_tau
-args.tau_threshold = 8
+args.tau_threshold = 20
 args.infinitesimal_tau = 0.01
 
 # Parameters of Dirichlet noises during MCTS

@@ -64,7 +64,7 @@ class OutBlock(nn.Module):
         policy = policy.exp()
 
         value = self.v_fc1(x)
-        value = self.v_fc2(value) + torch.tanh(self.v_fc3(value))
+        value = self.v_fc2(value) + self.v_fc3(torch.tanh(value))
         value = value.squeeze()
 
         return policy, value
@@ -105,7 +105,7 @@ class AlphaLoss(nn.Module):
         policy_pred, value_pred = pred
         policy_target, value_target = target
 
-        # policy_loss(s) = − \sum_{a: action} -p_{target}(s, a) \log(pi_{pred}(s, a))
+        # policy_loss(s) = − \sum_{a: action} p_{target}(s, a) \log(pi_{pred}(s, a))
         policy_loss = torch.sum(
             (-policy_target * (1e-8 + policy_pred.float()).float().log()),
             dim=1,
