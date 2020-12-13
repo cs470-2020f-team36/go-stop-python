@@ -205,8 +205,8 @@ class State:
             )
         )
         state.shaking_histories = [
-            CardList.deserialize(data["stacking_histories"][0]),
-            CardList.deserialize(data["stacking_histories"][1]),
+            CardList.deserialize(data["shaking_histories"][0]),
+            CardList.deserialize(data["shaking_histories"][1]),
         ]
         state.stacking_histories = [
             set(data["stacking_histories"][0]),
