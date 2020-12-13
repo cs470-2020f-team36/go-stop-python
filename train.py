@@ -270,14 +270,18 @@ def execute_episode(net: EncoderNet) -> Tensor:
     training_data = torch.zeros((0, DIM_ENCODED_GAME + NUM_ACTIONS + 2))
     root_node = create_root_node(Game(), net)
 
-    turn_count = 0
     while True:
-        # Take a sample of size `args.num_similar_games(turn_count)`
+        # Generate a training datum
+        num_of_cards_in_hand = len(root_node.game.board.hands[0]) + len(
+            root_node.game.board.hands[1]
+        )
+
+        # Take a sample of size `args.num_similar_games(num_of_cards_in_hand)`
         # consisting of games with the same observable information.
         similar_games = sample_from_observation(
             root_node.game,
             root_node.game.state.player,
-            sample_size=args.num_similar_games(turn_count),
+            sample_size=args.num_similar_games(num_of_cards_in_hand),
         )
 
         # Create the corresponding nodes.
@@ -300,10 +304,6 @@ def execute_episode(net: EncoderNet) -> Tensor:
             ):
                 search(node, net)
 
-            # Generate a training datum
-            num_of_cards_in_hand = len(node.game.board.hands[0]) + len(
-                node.game.board.hands[1]
-            )
             tau = (
                 1
                 if num_of_cards_in_hand < args.tau_threshold
@@ -335,9 +335,6 @@ def execute_episode(net: EncoderNet) -> Tensor:
 
         # And append to the final data
         training_data = torch.cat((training_data, average))
-
-        # Increase the `turn_count`
-        turn_count += 1
 
         # Choose the best action
         action_index = np.random.choice(
@@ -384,14 +381,13 @@ def evolve(net, evolution_count: int) -> Tuple[EncoderNet, float]:
             args.root_dir
             / f"training_data_{args.num_hidden_layers}_hidden_layers.pickle",
             "rb",
-        ) as f:
-            examples = pickle.load(f)
-            print(examples.shape)
+        ) as training_data_pickle:
+            examples = pickle.load(training_data_pickle)
     except:
         print("NO SAVED EXAMPLES")
         examples = torch.zeros((0, DIM_ENCODED_GAME + NUM_ACTIONS + 1))
 
-    for episode_count in tqdm.tqdm(
+    for _ in tqdm.tqdm(
         range(args.num_episodes_per_evolvution), desc="episodes"
     ):
         # Gather the training data
@@ -402,8 +398,8 @@ def evolve(net, evolution_count: int) -> Tuple[EncoderNet, float]:
             args.root_dir
             / f"training_data_{args.num_hidden_layers}_hidden_layers.pickle",
             "wb",
-        ) as f:
-            pickle.dump(examples, f)
+        ) as training_data_pickle:
+            pickle.dump(examples, training_data_pickle)
 
         trimmed_examples = examples[-args.replay_buffer_size(evolution_count) :]
 
@@ -452,7 +448,7 @@ def evolve(net, evolution_count: int) -> Tuple[EncoderNet, float]:
 
         print(f"Average loss: {total_loss}")
 
-    return (net, total_loss, total_policy_loss, total_value_loss)
+    return net
 
 
 def main():
@@ -488,7 +484,7 @@ def main():
             print(f"[Evolution {evolution_count}]")
 
             # Update the network
-            net, loss, policy_loss, value_loss = evolve(net, evolution_count)
+            net = evolve(net, evolution_count)
 
             # Match the trained network with the previous one.
             prev_agent = Agent.from_net(best_net)
@@ -512,17 +508,6 @@ def main():
             else:
                 print("The previous best network won the new one.")
                 net = best_net
-
-            try:
-                env["loss"] = env["loss"]
-            except KeyError:
-                env["loss"] = {}
-
-            env["loss"][str(evolution_count)] = {
-                "loss": loss,
-                "policy": policy_loss,
-                "value": value_loss,
-            }
 
             env["version"] += 1
 
