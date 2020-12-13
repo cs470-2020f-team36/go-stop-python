@@ -97,32 +97,6 @@ class UCTNode:
         policy = mean_exp(n_tensor, 1 / tau)
         return policy
 
-    def policy_with_noise(self, tau: float = 1) -> Tensor:
-        r"""
-        Return the weighted average of the policy from MCTS
-        and the Dirichlet noise:
-            (1 - \epsilon) \pi(\bullet \mid s; \tau) + \epsilon E,
-            E \sim Dirichlet(\alpha, \dots, \alpha)
-        """
-        policy = self.policy(tau)
-        dirichlet_noise = torch.from_numpy(
-            np.random.dirichlet(np.zeros([NUM_ACTIONS], dtype=np.float32) + args.alpha)
-        )
-        policy = (1 - args.epsilon) * policy + args.epsilon * dirichlet_noise
-        mask = (
-            Tensor(
-                [
-                    1 if ALL_ACTIONS[i] in self.game.actions() else 0
-                    for i in range(NUM_ACTIONS)
-                ],
-            )
-            == 0
-        )
-        policy = policy.masked_fill(mask, 0)
-        policy = policy / torch.sum(policy)
-
-        return policy
-
     def q(self, action: Action) -> float:
         """Return Q(s, a)."""
         if get_action_index(action) in self._q:
@@ -275,6 +249,11 @@ def execute_episode(net: EncoderNet) -> Tensor:
         num_of_cards_in_hand = len(root_node.game.board.hands[0]) + len(
             root_node.game.board.hands[1]
         )
+        tau = (
+            1
+            if num_of_cards_in_hand < args.tau_threshold
+            else args.infinitesimal_tau
+        )
 
         # Take a sample of size `args.num_similar_games(num_of_cards_in_hand)`
         # consisting of games with the same observable information.
@@ -304,11 +283,6 @@ def execute_episode(net: EncoderNet) -> Tensor:
             ):
                 search(node, net)
 
-            tau = (
-                1
-                if num_of_cards_in_hand < args.tau_threshold
-                else args.infinitesimal_tau
-            )
             action_index = np.random.choice(
                 range(NUM_ACTIONS),
                 p=node.policy(tau=args.infinitesimal_tau).clone().numpy(),
@@ -336,9 +310,27 @@ def execute_episode(net: EncoderNet) -> Tensor:
         # And append to the final data
         training_data = torch.cat((training_data, average))
 
+        # Add a Dirichlet noise to the average policy above
+        policy = average[0, DIM_ENCODED_GAME:-2]
+        dirichlet_noise = torch.from_numpy(
+            np.random.dirichlet(np.zeros([NUM_ACTIONS], dtype=np.float32) + args.alpha)
+        )
+        policy_with_noise = (1 - args.epsilon) * policy + args.epsilon * dirichlet_noise
+        mask = (
+            Tensor(
+                [
+                    1 if ALL_ACTIONS[i] in root_node.game.actions() else 0
+                    for i in range(NUM_ACTIONS)
+                ],
+            )
+            == 0
+        )
+        policy_with_noise = policy_with_noise.masked_fill(mask, 0)
+        policy_with_noise = policy_with_noise / torch.sum(policy_with_noise)
+
         # Choose the best action
         action_index = np.random.choice(
-            NUM_ACTIONS, p=list(root_node.policy_with_noise())
+            NUM_ACTIONS, p=policy_with_noise.tolist()
         )
         # The following will ensure that `action_index` have been visited at least once
         while action_index not in root_node.children:
@@ -391,7 +383,7 @@ def evolve(net, evolution_count: int) -> Tuple[EncoderNet, float]:
         range(args.num_episodes_per_evolvution), desc="episodes"
     ):
         # Gather the training data
-        training_data = execute_episode(net)
+        """training_data = execute_episode(net)
         examples = torch.cat((examples, training_data))
 
         with open(
@@ -399,7 +391,7 @@ def evolve(net, evolution_count: int) -> Tuple[EncoderNet, float]:
             / f"training_data_{args.num_hidden_layers}_hidden_layers.pickle",
             "wb",
         ) as training_data_pickle:
-            pickle.dump(examples, training_data_pickle)
+            pickle.dump(examples, training_data_pickle)"""
 
         trimmed_examples = examples[-args.replay_buffer_size(evolution_count) :]
 
